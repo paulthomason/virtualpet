@@ -2,7 +2,7 @@ import pygame
 import sys
 from dog_park import draw_dog_park
 from inventory import draw_inventory
-from chat import draw_chat, update_chat
+from chat import draw_chat, update_chat, init_chat, chat_lines
 from settings import draw_settings, handle_settings_event
 from birdie import draw_birdie
 from snake import draw_snake, update_snake, handle_snake_event
@@ -51,12 +51,7 @@ clock = pygame.time.Clock()
 running = True
 
 # For passing state (e.g. chat)
-chat_lines = [
-    {"user": "syl", "msg": "wat up"},
-    {"user": "george", "msg": "yo"},
-]
 chat_scroll = 0
-last_msg_time = 0
 
 while running:
     now = pygame.time.get_ticks() / 1000.0
@@ -78,6 +73,8 @@ while running:
                     menu_scroll = max(0, min(menu_scroll, len(menu_options) - MAX_VISIBLE))
                 elif event.key in [pygame.K_RETURN, pygame.K_SPACE]:
                     state = menu_options[selected]
+                    if state == "Chat":
+                        init_chat()
             else:
                 if state == "Type":
                     if event.key == pygame.K_ESCAPE:
