@@ -9,6 +9,15 @@ from snake import draw_snake, update_snake, handle_snake_event
 from pong import draw_pong, update_pong, handle_pong_event
 from tetris import draw_tetris, update_tetris, handle_tetris_event, reset_tetris
 from typer import draw_type, handle_type_event
+from battle import (
+    draw_battle_menu,
+    handle_battle_menu_event,
+    start_practice_battle,
+    draw_practice_battle,
+    handle_practice_event,
+    draw_gamelink,
+    handle_gamelink_event,
+)
 
 pygame.init()
 SIZE = 128
@@ -21,7 +30,18 @@ BIGFONT = pygame.font.SysFont("monospace", 15)
 WHITE = (255,255,255)
 BLACK = (0,0,0)
 
-menu_options = ["Birdie", "Dog Park", "Inventory", "Chat", "Settings", "Snake", "Pong", "Tetris", "Type"]
+menu_options = [
+    "Birdie",
+    "Dog Park",
+    "Inventory",
+    "Chat",
+    "Settings",
+    "Battle",
+    "Snake",
+    "Pong",
+    "Tetris",
+    "Type",
+]
 selected = 0
 menu_scroll = 0
 MAX_VISIBLE = 6
@@ -64,6 +84,21 @@ while running:
                         state = "menu"
                     else:
                         handle_type_event(event)
+                elif state == "Battle":
+                    selection = handle_battle_menu_event(event)
+                    if selection == "Practice":
+                        start_practice_battle()
+                        state = "BattlePractice"
+                    elif selection == "GameLink":
+                        state = "BattleGameLink"
+                    elif event.key == pygame.K_ESCAPE:
+                        state = "menu"
+                elif state == "BattlePractice":
+                    if handle_practice_event(event):
+                        state = "Battle"
+                elif state == "BattleGameLink":
+                    if handle_gamelink_event(event):
+                        state = "Battle"
                 elif event.key in [pygame.K_RETURN, pygame.K_SPACE]:
                     if state == "Chat":
                         chat_scroll = 0
@@ -108,6 +143,12 @@ while running:
         draw_settings(screen, FONT)
     elif state == "Birdie":
         draw_birdie(screen, FONT)
+    elif state == "Battle":
+        draw_battle_menu(screen, FONT)
+    elif state == "BattlePractice":
+        draw_practice_battle(screen, FONT)
+    elif state == "BattleGameLink":
+        draw_gamelink(screen, FONT)
     elif state == "Snake":
         update_snake(now)
         draw_snake(screen, FONT)
