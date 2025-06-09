@@ -1,7 +1,9 @@
 import http.server
 import threading
 import urllib.parse
+import html
 import settings
+import chat
 
 _server_thread = None
 
@@ -15,7 +17,11 @@ class RemoteHandler(http.server.BaseHTTPRequestHandler):
             difficulty = next((o["value"] for o in settings.settings_options if o["name"] == "Difficulty"), "?")
             wifi = next((o["value"] for o in settings.settings_options if o["name"] == "WiFi"), False)
             wifi_status = "on" if wifi else "off"
-            html = f"""<html><body><h1>Remote Control</h1>
+            chat_html = "".join(
+                f"<p><b>{html.escape(c['user'])}</b>: {html.escape(c['msg'])}</p>"
+                for c in chat.chat_lines[-10:]
+            )
+            html_doc = f"""<html><body><h1>Remote Control</h1>
 <p>Difficulty: {difficulty}</p>
 <p>WiFi: {wifi_status}</p>
 <p>Set difficulty:
@@ -25,8 +31,14 @@ class RemoteHandler(http.server.BaseHTTPRequestHandler):
 <p>Toggle WiFi:
 <a href='/set?option=WiFi&value=true'>On</a> |
 <a href='/set?option=WiFi&value=false'>Off</a></p>
+<h2>Chat</h2>
+{chat_html}
+<form action='/send' method='get'>
+<input type='text' name='msg' />
+<input type='submit' value='Send' />
+</form>
 </body></html>"""
-            self.wfile.write(html.encode("utf-8"))
+            self.wfile.write(html_doc.encode("utf-8"))
         elif parsed.path == "/set":
             params = urllib.parse.parse_qs(parsed.query)
             option = params.get("option", [None])[0]
@@ -45,6 +57,14 @@ class RemoteHandler(http.server.BaseHTTPRequestHandler):
                 self.end_headers()
             else:
                 self.send_error(400, "Invalid option")
+        elif parsed.path == "/send":
+            params = urllib.parse.parse_qs(parsed.query)
+            msg = params.get("msg", [""])[0]
+            if msg:
+                chat.send_chat_message(msg)
+            self.send_response(303)
+            self.send_header("Location", "/")
+            self.end_headers()
         else:
             self.send_error(404)
 
@@ -53,6 +73,7 @@ def start_server(host: str = "0.0.0.0", port: int = 8000) -> None:
     global _server_thread
     if _server_thread:
         return
+    chat.init_chat()
     server = http.server.ThreadingHTTPServer((host, port), RemoteHandler)
     _server_thread = threading.Thread(target=server.serve_forever, daemon=True)
     _server_thread.start()
