@@ -7,6 +7,7 @@ from settings import draw_settings, handle_settings_event
 from birdie import draw_birdie
 from snake import draw_snake, update_snake, handle_snake_event
 from pong import draw_pong, update_pong, handle_pong_event
+from typer import draw_type, handle_type_event
 
 pygame.init()
 SIZE = 128
@@ -19,7 +20,7 @@ BIGFONT = pygame.font.SysFont("monospace", 15)
 WHITE = (255,255,255)
 BLACK = (0,0,0)
 
-menu_options = ["Birdie", "Dog Park", "Inventory", "Chat", "Settings", "Snake", "Pong"]
+menu_options = ["Birdie", "Dog Park", "Inventory", "Chat", "Settings", "Snake", "Pong", "Type"]
 selected = 0
 menu_scroll = 0
 MAX_VISIBLE = 6
@@ -57,7 +58,12 @@ while running:
                 elif event.key in [pygame.K_RETURN, pygame.K_SPACE]:
                     state = menu_options[selected]
             else:
-                if event.key in [pygame.K_RETURN, pygame.K_SPACE]:
+                if state == "Type":
+                    if event.key == pygame.K_ESCAPE:
+                        state = "menu"
+                    else:
+                        handle_type_event(event)
+                elif event.key in [pygame.K_RETURN, pygame.K_SPACE]:
                     if state == "Chat":
                         chat_scroll = 0
                     state = "menu"
@@ -105,6 +111,8 @@ while running:
     elif state == "Pong":
         update_pong(now)
         draw_pong(screen, FONT)
+    elif state == "Type":
+        draw_type(screen, FONT)
 
     pygame.display.flip()
     clock.tick(30)
