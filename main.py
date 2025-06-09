@@ -15,6 +15,7 @@ from snake import draw_snake, update_snake, handle_snake_event
 from pong import draw_pong, update_pong, handle_pong_event
 from tetris import draw_tetris, update_tetris, handle_tetris_event, reset_tetris
 from typer import draw_type, handle_type_event
+import remote
 from battle import (
     draw_battle_menu,
     handle_battle_menu_event,
@@ -46,6 +47,7 @@ menu_options = [
     "Snake",
     "Pong",
     "Tetris",
+    "Remote",
     "Type",
 ]
 selected = 0
@@ -81,6 +83,8 @@ while running:
                     state = menu_options[selected]
                     if state == "Chat":
                         init_chat()
+                    elif state == "Remote":
+                        remote.start_server()
             else:
                 if state == "Type":
                     if event.key == pygame.K_ESCAPE:
@@ -126,6 +130,9 @@ while running:
                         chat_scroll -= 1
                     else:
                         handle_chat_event(event)
+                elif state == "Remote":
+                    if event.key in (pygame.K_RETURN, pygame.K_SPACE, pygame.K_ESCAPE):
+                        state = "menu"
                 elif event.key in [pygame.K_RETURN, pygame.K_SPACE]:
                     state = "menu"
                 elif state == "Snake":
@@ -177,6 +184,8 @@ while running:
     elif state == "Tetris":
         update_tetris(now)
         draw_tetris(screen, FONT)
+    elif state == "Remote":
+        draw_remote(screen, FONT)
     elif state == "Type":
         draw_type(screen, FONT)
 
