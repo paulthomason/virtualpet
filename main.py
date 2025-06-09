@@ -3,7 +3,7 @@ import sys
 import settings
 from dog_park import draw_dog_park
 from inventory import draw_inventory
-from chat import draw_chat, update_chat, init_chat, chat_lines
+from chat import draw_chat, update_chat, init_chat, chat_lines, handle_chat_event
 from settings import (
     draw_settings,
     handle_settings_event,
