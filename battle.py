@@ -1,5 +1,6 @@
 import pygame
 import random
+import logging
 from dataclasses import dataclass, field
 from typing import Optional
 
@@ -15,6 +16,16 @@ player_hp = PLAYER_MAX_HP
 enemy_hp = ENEMY_MAX_HP
 message = ""
 battle_over = False
+
+# Logger used to track sound playback issues
+logger = logging.getLogger("sound")
+if not logger.handlers:
+    handler = logging.FileHandler("soundlog.txt", mode="a")
+    handler.setFormatter(
+        logging.Formatter("%(asctime)s %(levelname)s: %(message)s")
+    )
+    logger.addHandler(handler)
+logger.setLevel(logging.DEBUG)
 
 # Move names for practice mode
 ATTACKS = ["Scratch", "Bite", "Kick", "Headbutt"]
@@ -56,8 +67,9 @@ def _play_sound(path: str) -> None:
     """Play a sound file if available."""
     try:
         pygame.mixer.Sound(path).play()
-    except Exception:
-        pass
+        logger.debug(f"Played sound: {path}")
+    except Exception as exc:
+        logger.exception(f"Failed to play {path}: {exc}")
 
 
 # Constants for wild battle UI
