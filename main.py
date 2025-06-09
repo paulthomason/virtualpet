@@ -6,7 +6,14 @@ import platform
 import settings
 from dog_park import draw_dog_park
 from inventory import draw_inventory
-from chat import draw_chat, update_chat, init_chat, chat_lines
+import chat
+from chat import (
+    draw_chat,
+    update_chat,
+    init_chat,
+    chat_lines,
+    handle_chat_event,
+)
 from settings import (
     draw_settings,
     handle_settings_event,
@@ -194,16 +201,17 @@ try:
                             logger.info("State change -> Settings")
                         else:
                             handle_sound_event(event)
-                    elif event.key in [pygame.K_RETURN, pygame.K_SPACE]:
-                        if state == "Chat":
+                    elif state == "Chat":
+                        if event.key == pygame.K_ESCAPE:
                             chat_scroll = 0
+                            chat.typed_text = ""
+                            logger.info("State change -> menu")
+                            state = "menu"
+                        else:
+                            handle_chat_event(event)
+                    elif event.key in [pygame.K_RETURN, pygame.K_SPACE]:
                         logger.info("State change -> menu")
                         state = "menu"
-                    elif state == "Chat":
-                        if event.key == pygame.K_UP:
-                            chat_scroll += 1
-                        elif event.key == pygame.K_DOWN:
-                            chat_scroll -= 1
                     elif state == "Snake":
                         logger.debug("snake event")
                         handle_snake_event(event)

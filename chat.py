@@ -3,8 +3,21 @@
 import socket
 import threading
 import logging
+import pygame
+import queue
 
-MAX_VISIBLE = 6
+# Typing state for composing outgoing messages
+keyboard_chars = list("abcdefghijklmnopqrstuvwxyz0123456789.,!? ")
+VISIBLE = 10
+cursor = 0
+scroll = 0
+typed_text = ""
+shift = False
+
+# Queue used by the IRC thread to send outgoing messages
+send_queue: queue.Queue[str] = queue.Queue()
+
+MAX_VISIBLE = 4
 chat_lines = []
 _init = False
 _thread = None
@@ -27,10 +40,22 @@ def _irc_thread(server: str, port: int, channel: str, nick: str) -> None:
         send(f"JOIN {channel}\r\n")
 
         buffer = ""
+        sock.settimeout(0.1)
         while True:
-            data = sock.recv(4096).decode("utf-8", "ignore")
-            if not data:
-                break
+            # Send any queued outgoing messages
+            try:
+                while True:
+                    out = send_queue.get_nowait()
+                    send(f"PRIVMSG {channel} :{out}\r\n")
+            except queue.Empty:
+                pass
+
+            try:
+                data = sock.recv(4096).decode("utf-8", "ignore")
+                if not data:
+                    break
+            except socket.timeout:
+                data = ""
             buffer += data
             while "\r\n" in buffer:
                 line, buffer = buffer.split("\r\n", 1)
@@ -77,6 +102,40 @@ def init_chat() -> None:
 def update_chat(_lines, _now):
     """No-op placeholder for compatibility with the main loop."""
 
+
+def send_chat_message(message: str) -> None:
+    """Queue an outgoing chat message to be sent to the IRC server."""
+    if message:
+        send_queue.put(message)
+
+
+def handle_chat_event(event) -> None:
+    """Handle key events for composing and sending chat messages."""
+    global cursor, scroll, typed_text, shift
+    if event.key == pygame.K_LEFT:
+        cursor = (cursor - 1) % len(keyboard_chars)
+    elif event.key == pygame.K_RIGHT:
+        cursor = (cursor + 1) % len(keyboard_chars)
+    elif event.key == pygame.K_UP:
+        ch = keyboard_chars[cursor]
+        if shift:
+            ch = ch.upper()
+            shift = False
+        typed_text += ch
+        if len(typed_text) > 200:
+            typed_text = typed_text[-200:]
+    elif event.key == pygame.K_DOWN:
+        typed_text = typed_text[:-1]
+    elif event.key == pygame.K_TAB:
+        shift = not shift
+    elif event.key == pygame.K_RETURN:
+        send_chat_message(typed_text)
+        typed_text = ""
+
+    if cursor < scroll:
+        scroll = cursor
+    elif cursor >= scroll + VISIBLE:
+        scroll = cursor - VISIBLE + 1
 def draw_chat(screen, FONT, chat_lines, chat_scroll):
     """Render the received IRC messages."""
 
@@ -88,3 +147,22 @@ def draw_chat(screen, FONT, chat_lines, chat_scroll):
         y = 15 + i * 18
         msg = FONT.render(f"{chat['user']}> {chat['msg']}", True, (255, 255, 255))
         screen.blit(msg, (6, y))
+
+    # Draw the current input line at the bottom
+    input_display = typed_text[-16:]
+    msg = FONT.render(f"> {input_display}", True, (0, 255, 0))
+    screen.blit(msg, (6, 118))
+
+    # Display on-screen keyboard similar to the typing mini-game
+    start_k = scroll
+    end_k = scroll + VISIBLE
+    for i, ch in enumerate(keyboard_chars[start_k:end_k]):
+        idx = start_k + i
+        color = (255, 255, 0) if idx == cursor else (200, 200, 200)
+        disp_ch = ch.upper() if shift else ch
+        text = FONT.render(disp_ch, True, color)
+        x = 6 + i * 12
+        screen.blit(text, (x, 98))
+
+    tip = FONT.render("ARROWS Type TAB=Shift RET=Send ESC=Back", True, (150, 150, 150))
+    screen.blit(tip, (2, 2))
