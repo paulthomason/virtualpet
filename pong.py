@@ -8,6 +8,7 @@ PLAYER_X = 4
 AI_X = WIDTH - PADDLE_W - 4
 
 player_y = HEIGHT // 2 - PADDLE_H // 2
+player_move = 0
 ai_y = HEIGHT // 2 - PADDLE_H // 2
 ball_pos = [WIDTH // 2, HEIGHT // 2]
 ball_vel = [2, 2]
@@ -25,18 +26,25 @@ reset_pong()
 
 
 def handle_pong_event(event):
-    """Move the player paddle."""
-    global player_y
-    if event.key == pygame.K_UP:
-        player_y -= 4
-    elif event.key == pygame.K_DOWN:
-        player_y += 4
-    player_y = max(0, min(HEIGHT - PADDLE_H, player_y))
+    """Start or stop moving the player paddle based on key events."""
+    global player_move
+    if event.type == pygame.KEYDOWN:
+        if event.key == pygame.K_UP:
+            player_move = -4
+        elif event.key == pygame.K_DOWN:
+            player_move = 4
+    elif event.type == pygame.KEYUP:
+        if event.key in (pygame.K_UP, pygame.K_DOWN):
+            player_move = 0
 
 
 def update_pong(now):
     """Update pong game state."""
-    global ball_pos, ball_vel, ai_y
+    global ball_pos, ball_vel, ai_y, player_y
+
+    # Move player paddle continuously
+    player_y += player_move
+    player_y = max(0, min(HEIGHT - PADDLE_H, player_y))
 
     # Move ball
     ball_pos[0] += ball_vel[0]
