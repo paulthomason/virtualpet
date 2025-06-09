@@ -21,6 +21,8 @@ BLACK = (0,0,0)
 
 menu_options = ["Birdie", "Dog Park", "Inventory", "Chat", "Settings", "Snake", "Pong"]
 selected = 0
+menu_scroll = 0
+MAX_VISIBLE = 6
 state = "menu"
 
 clock = pygame.time.Clock()
@@ -47,6 +49,11 @@ while running:
                         selected = (selected - 1) % len(menu_options)
                     else:
                         selected = (selected + 1) % len(menu_options)
+                    if selected < menu_scroll:
+                        menu_scroll = selected
+                    elif selected >= menu_scroll + MAX_VISIBLE:
+                        menu_scroll = selected - MAX_VISIBLE + 1
+                    menu_scroll = max(0, min(menu_scroll, len(menu_options) - MAX_VISIBLE))
                 elif event.key in [pygame.K_RETURN, pygame.K_SPACE]:
                     state = menu_options[selected]
             else:
@@ -66,16 +73,21 @@ while running:
                     handle_snake_event(event)
                 elif state == "Pong":
                     handle_pong_event(event)
+        elif event.type == pygame.KEYUP:
+            if state == "Pong":
+                handle_pong_event(event)
 
     # Draw current screen
     if state == "menu":
         screen.fill((120, 180, 255))
         title = BIGFONT.render("Main Menu", True, BLACK)
         screen.blit(title, (10, 5))
-        for i, option in enumerate(menu_options):
+        visible_options = menu_options[menu_scroll:menu_scroll + MAX_VISIBLE]
+        for idx, option in enumerate(visible_options):
+            i = menu_scroll + idx
             color = (50,100,255) if i == selected else BLACK
             text = FONT.render(option, True, color)
-            screen.blit(text, (20, 28 + i*16))
+            screen.blit(text, (20, 28 + idx*16))
     elif state == "Dog Park":
         draw_dog_park(screen, FONT)
     elif state == "Inventory":
