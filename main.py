@@ -185,7 +185,7 @@ while running:
         update_tetris(now)
         draw_tetris(screen, FONT)
     elif state == "Remote":
-        draw_remote(screen, FONT)
+        remote.draw_remote(screen, FONT)
     elif state == "Type":
         draw_type(screen, FONT)
 
