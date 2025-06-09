@@ -4,6 +4,7 @@ import urllib.parse
 import html
 import settings
 import chat
+import inventory
 
 _server_thread = None
 
@@ -21,6 +22,10 @@ class RemoteHandler(http.server.BaseHTTPRequestHandler):
                 f"<p><b>{html.escape(c['user'])}</b>: {html.escape(c['msg'])}</p>"
                 for c in chat.chat_lines[-10:]
             )
+            inv_html = "".join(
+                f"<li>{html.escape(item)} <a href='/remove_item?idx={i}'>remove</a></li>"
+                for i, item in enumerate(inventory.inventory_items)
+            )
             html_doc = f"""<html><body><h1>Remote Control</h1>
 <p>Difficulty: {difficulty}</p>
 <p>WiFi: {wifi_status}</p>
@@ -31,6 +36,12 @@ class RemoteHandler(http.server.BaseHTTPRequestHandler):
 <p>Toggle WiFi:
 <a href='/set?option=WiFi&value=true'>On</a> |
 <a href='/set?option=WiFi&value=false'>Off</a></p>
+<h2>Inventory</h2>
+<ul>{inv_html}</ul>
+<form action='/add_item' method='get'>
+<input type='text' name='item' />
+<input type='submit' value='Add' />
+</form>
 <h2>Chat</h2>
 {chat_html}
 <form action='/send' method='get'>
@@ -62,6 +73,25 @@ class RemoteHandler(http.server.BaseHTTPRequestHandler):
             msg = params.get("msg", [""])[0]
             if msg:
                 chat.send_chat_message(msg)
+            self.send_response(303)
+            self.send_header("Location", "/")
+            self.end_headers()
+        elif parsed.path == "/add_item":
+            params = urllib.parse.parse_qs(parsed.query)
+            item = params.get("item", [""])[0]
+            if item:
+                inventory.inventory_items.append(item)
+            self.send_response(303)
+            self.send_header("Location", "/")
+            self.end_headers()
+        elif parsed.path == "/remove_item":
+            params = urllib.parse.parse_qs(parsed.query)
+            try:
+                idx = int(params.get("idx", ["-1"])[0])
+            except ValueError:
+                idx = -1
+            if 0 <= idx < len(inventory.inventory_items):
+                del inventory.inventory_items[idx]
             self.send_response(303)
             self.send_header("Location", "/")
             self.end_headers()
