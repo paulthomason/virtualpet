@@ -12,6 +12,8 @@ player_move = 0
 ai_y = HEIGHT // 2 - PADDLE_H // 2
 ball_pos = [WIDTH // 2, HEIGHT // 2]
 ball_vel = [2, 2]
+player_score = 0
+high_score = 0
 
 
 def reset_pong():
@@ -64,8 +66,17 @@ def update_pong(now):
             ai_y <= ball_pos[1] <= ai_y + PADDLE_H):
         ball_vel[0] = -abs(ball_vel[0])
 
-    # Left or right edge -> reset
-    if ball_pos[0] < 0 or ball_pos[0] > WIDTH:
+    # Left or right edge -> score/reset
+    global player_score, high_score
+    if ball_pos[0] < 0:
+        if player_score > high_score:
+            high_score = player_score
+        player_score = 0
+        reset_pong()
+    elif ball_pos[0] > WIDTH:
+        player_score += 1
+        if player_score > high_score:
+            high_score = player_score
         reset_pong()
 
     # Simple AI movement (medium difficulty)
@@ -85,5 +96,8 @@ def draw_pong(screen, FONT):
     pygame.draw.rect(screen, (255, 255, 255),
                      (ball_pos[0], ball_pos[1], BALL_SIZE, BALL_SIZE))
 
+    score_text = FONT.render(f"Score:{player_score} High:{high_score}", True,
+                             (200, 200, 200))
+    screen.blit(score_text, (2, 2))
     tip = FONT.render("Arrows=Move  Enter=Back", True, (200, 200, 200))
     screen.blit(tip, (2, 114))

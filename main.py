@@ -7,6 +7,7 @@ from settings import draw_settings, handle_settings_event
 from birdie import draw_birdie
 from snake import draw_snake, update_snake, handle_snake_event
 from pong import draw_pong, update_pong, handle_pong_event
+from tetris import draw_tetris, update_tetris, handle_tetris_event, reset_tetris
 from typer import draw_type, handle_type_event
 
 pygame.init()
@@ -20,7 +21,7 @@ BIGFONT = pygame.font.SysFont("monospace", 15)
 WHITE = (255,255,255)
 BLACK = (0,0,0)
 
-menu_options = ["Birdie", "Dog Park", "Inventory", "Chat", "Settings", "Snake", "Pong", "Type"]
+menu_options = ["Birdie", "Dog Park", "Inventory", "Chat", "Settings", "Snake", "Pong", "Tetris", "Type"]
 selected = 0
 menu_scroll = 0
 MAX_VISIBLE = 6
@@ -79,6 +80,8 @@ while running:
                     handle_snake_event(event)
                 elif state == "Pong":
                     handle_pong_event(event)
+                elif state == "Tetris":
+                    handle_tetris_event(event)
         elif event.type == pygame.KEYUP:
             if state == "Pong":
                 handle_pong_event(event)
@@ -111,6 +114,9 @@ while running:
     elif state == "Pong":
         update_pong(now)
         draw_pong(screen, FONT)
+    elif state == "Tetris":
+        update_tetris(now)
+        draw_tetris(screen, FONT)
     elif state == "Type":
         draw_type(screen, FONT)
 
