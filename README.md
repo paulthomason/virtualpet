@@ -18,3 +18,27 @@ Ensure the environment variables `SDL_VIDEODRIVER=fbcon` and
 `SDL_FBDEV=/dev/fb1` are available (these are set automatically in
 `main.py`).
 
+## Autostart on boot
+
+A `systemd` service file `virtualpet.service` is included so the
+application can start automatically when the Pi powers on.
+
+1. Copy the service file to `/etc/systemd/system`:
+
+   ```bash
+   sudo cp virtualpet.service /etc/systemd/system/
+   ```
+
+2. Edit the `WorkingDirectory` in the file if the repository is located
+   somewhere other than `/home/pi/virtualpet`.
+
+3. Enable and start the service:
+
+   ```bash
+   sudo systemctl enable virtualpet.service
+   sudo systemctl start virtualpet.service
+   ```
+
+The application will now run on every boot. View its logs with
+`journalctl -u virtualpet.service`.
+
