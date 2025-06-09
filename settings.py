@@ -1,12 +1,51 @@
 """Interactive settings screen."""
 
 import pygame
+import subprocess
+
+
+def wifi_enabled():
+    """Return True if WiFi radio is enabled."""
+    try:
+        out = subprocess.check_output(["nmcli", "radio", "wifi"]).decode().strip()
+        return out.lower() == "enabled"
+    except Exception:
+        return True
+
+
+def set_wifi_enabled(enabled: bool) -> None:
+    """Enable or disable WiFi radio using nmcli."""
+    cmd = ["nmcli", "radio", "wifi", "on" if enabled else "off"]
+    try:
+        subprocess.check_call(cmd)
+    except Exception:
+        pass
+
+
+def current_ssid() -> str:
+    """Return the SSID of the currently connected network, if any."""
+    try:
+        out = subprocess.check_output([
+            "nmcli",
+            "-t",
+            "-f",
+            "active,ssid",
+            "device",
+            "wifi",
+        ]).decode()
+        for line in out.splitlines():
+            if line.startswith("yes:"):
+                return line.split(":", 1)[1] or "unknown"
+    except Exception:
+        pass
+    return "unknown"
 
 # Available settings with default values
 settings_options = [
     {"name": "Sound", "type": "bool", "value": True},
     {"name": "Difficulty", "type": ["Easy", "Normal", "Hard"], "value": "Normal"},
     {"name": "Show Tips", "type": "bool", "value": True},
+    {"name": "WiFi", "type": "bool", "value": wifi_enabled()},
 ]
 
 # Index of the currently selected setting
@@ -25,6 +64,8 @@ def handle_settings_event(event):
         option = settings_options[selected_option]
         if option["type"] == "bool":
             option["value"] = not option["value"]
+            if option["name"] == "WiFi":
+                set_wifi_enabled(option["value"])
         else:
             choices = option["type"]
             idx = choices.index(option["value"])
@@ -44,7 +85,11 @@ def draw_settings(screen, FONT):
 
     for i, option in enumerate(settings_options):
         color = (200, 255, 200) if i == selected_option else (255, 255, 255)
-        text = f"{option['name']}: {option['value']}"
+        text_value = option['value']
+        if option['name'] == 'WiFi':
+            status = 'On' if option['value'] else 'Off'
+            text_value = f"{status} ({current_ssid()})"
+        text = f"{option['name']}: {text_value}"
         msg = FONT.render(text, True, color)
         screen.blit(msg, (6, 24 + i * 16))
 
