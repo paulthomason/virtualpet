@@ -36,10 +36,27 @@ def init() -> None:
         print("GPIO not available; using keyboard input")
         return
 
+    # Clear any previous GPIO configuration that might remain if the
+    # application exited unexpectedly.  This helps avoid "Failed to add edge
+    # detection" errors when rerunning the program.
+    GPIO.cleanup()
     GPIO.setmode(GPIO.BCM)
     for pin in PIN_KEY_MAP:
         GPIO.setup(pin, GPIO.IN, pull_up_down=GPIO.PUD_UP)
-        GPIO.add_event_detect(pin, GPIO.BOTH, callback=_handle, bouncetime=50)
+        try:
+            GPIO.add_event_detect(
+                pin, GPIO.BOTH, callback=_handle, bouncetime=50
+            )
+        except RuntimeError:
+            # If event detection is already in place for this pin, remove and
+            # try again so that reruns work without manual cleanup.
+            try:
+                GPIO.remove_event_detect(pin)
+                GPIO.add_event_detect(
+                    pin, GPIO.BOTH, callback=_handle, bouncetime=50
+                )
+            except RuntimeError as exc:
+                print(f"Failed to add edge detection for pin {pin}: {exc}")
 
 
 def cleanup() -> None:
