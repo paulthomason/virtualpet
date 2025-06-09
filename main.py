@@ -3,7 +3,7 @@ import sys
 from dog_park import draw_dog_park
 from inventory import draw_inventory
 from chat import draw_chat, update_chat
-from settings import draw_settings
+from settings import draw_settings, handle_settings_event
 from birdie import draw_birdie
 
 pygame.init()
@@ -49,15 +49,17 @@ while running:
                     state = menu_options[selected]
             else:
                 if event.key in [pygame.K_RETURN, pygame.K_SPACE]:
-                    state = "menu"
                     if state == "Chat":
                         chat_scroll = 0
+                    state = "menu"
                 elif state == "Chat":
                     # Pass arrow key events for scrolling
                     if event.key == pygame.K_UP:
                         chat_scroll += 1
                     elif event.key == pygame.K_DOWN:
                         chat_scroll -= 1
+                elif state == "Settings":
+                    handle_settings_event(event)
 
     # Draw current screen
     if state == "menu":
