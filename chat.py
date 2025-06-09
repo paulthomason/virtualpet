@@ -20,6 +20,31 @@ send_queue: queue.Queue[str] = queue.Queue()
 # Nickname used when connecting to the IRC server
 NICK = "birdie"
 
+# Mapping of nicknames to unique colors for easy differentiation
+nick_colors: dict[str, tuple[int, int, int]] = {}
+
+# Colour palette with high contrast on a black background
+PALETTE = [
+    (255, 96, 96),  # red
+    (96, 255, 96),  # green
+    (96, 96, 255),  # blue
+    (255, 255, 96),  # yellow
+    (255, 96, 255),  # magenta
+    (96, 255, 255),  # cyan
+    (255, 160, 96),  # orange
+    (160, 96, 255),  # purple
+]
+
+
+def get_nick_color(nick: str) -> tuple[int, int, int]:
+    """Return a readable colour for ``nick``."""
+    if nick == NICK:
+        # Highlight our own nick in bright cyan
+        return (96, 255, 255)
+    if nick not in nick_colors:
+        nick_colors[nick] = PALETTE[len(nick_colors) % len(PALETTE)]
+    return nick_colors[nick]
+
 # Max number of chat lines to display on screen
 MAX_VISIBLE = 5
 
@@ -183,35 +208,49 @@ def handle_chat_event(event) -> None:
     elif cursor >= scroll + VISIBLE:
         scroll = cursor - VISIBLE + 1
 def draw_chat(screen, FONT, chat_lines, chat_scroll):
-    """Render the received IRC messages."""
+    """Render the received IRC messages with coloured nicknames."""
 
     font = get_chat_font()
     screen.fill((0, 0, 0))
 
     max_width = screen.get_width() - 12
 
-    # Expand stored messages into individual wrapped lines
-    rendered_lines: list[tuple[str, int]] = []
+    # Expand stored messages into individual wrapped lines with colour info
+    rendered_lines: list[
+        tuple[str, str, tuple[int, int, int], tuple[int, int, int], int]
+    ] = []
     for chat in chat_lines:
         prefix = f"{chat['user']}> "
         prefix_width = font.size(prefix)[0]
         parts = wrap_text(chat["msg"], font, max_width - prefix_width)
         if not parts:
             parts = [""]
+        prefix_color = get_nick_color(chat["user"])
+        text_color = (96, 255, 255) if chat["user"] == NICK else (255, 255, 255)
         for idx, part in enumerate(parts):
             if idx == 0:
-                rendered_lines.append((prefix + part, 6))
+                rendered_lines.append(
+                    (prefix, part, prefix_color, text_color, 6)
+                )
             else:
-                rendered_lines.append((part, 6 + prefix_width))
+                rendered_lines.append(
+                    ("", part, prefix_color, text_color, 6 + prefix_width)
+                )
 
     start = max(0, len(rendered_lines) - MAX_VISIBLE - chat_scroll)
     end = max(0, len(rendered_lines) - chat_scroll)
     visible = rendered_lines[start:end]
 
-    for i, (text, x) in enumerate(visible):
+    for i, (pref, text, pref_c, txt_c, x) in enumerate(visible):
         y = 15 + i * LINE_HEIGHT
-        msg = font.render(text, True, (255, 255, 255))
-        screen.blit(msg, (x, y))
+        if pref:
+            pref_surf = font.render(pref, True, pref_c)
+            screen.blit(pref_surf, (x, y))
+            msg_surf = font.render(text, True, txt_c)
+            screen.blit(msg_surf, (x + font.size(pref)[0], y))
+        else:
+            msg_surf = font.render(text, True, txt_c)
+            screen.blit(msg_surf, (x, y))
 
     # Draw the current input line at the bottom
     input_display = typed_text[-16:]
