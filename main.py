@@ -2,7 +2,7 @@ import pygame
 import sys
 import settings
 from dog_park import draw_dog_park
-from inventory import draw_inventory
+from inventory import draw_inventory, handle_inventory_event
 from chat import draw_chat, update_chat, init_chat, chat_lines, handle_chat_event
 from settings import (
     draw_settings,
@@ -132,6 +132,9 @@ while running:
                         chat_scroll -= 1
                     else:
                         handle_chat_event(event)
+                elif state == "Inventory":
+                    if handle_inventory_event(event):
+                        state = "menu"
                 elif state == "Remote":
                     if event.key in (pygame.K_RETURN, pygame.K_SPACE, pygame.K_ESCAPE):
                         state = "menu"
