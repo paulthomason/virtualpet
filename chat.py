@@ -71,18 +71,38 @@ def get_chat_font():
 def wrap_text(text: str, font: pygame.font.Font, width: int) -> list[str]:
     """Wrap ``text`` into a list of lines no wider than ``width`` pixels."""
     words = text.split(" ")
-    lines = []
+    lines: list[str] = []
     current = ""
     for word in words:
         candidate = word if not current else f"{current} {word}"
         if font.size(candidate)[0] <= width:
+            # Entire candidate fits on the current line
             current = candidate
-        else:
-            if current:
-                lines.append(current)
-            current = word
+            continue
+
+        if current:
+            # Finalise the current line before handling the long word
+            lines.append(current)
+            current = ""
+
+        # If the word itself is too wide for a single line, split it
+        while word and font.size(word)[0] > width:
+            # Find the largest prefix that fits within width
+            end = len(word)
+            while end > 0 and font.size(word[:end])[0] > width:
+                end -= 1
+            # Safety check to avoid infinite loops if a single
+            # character somehow does not fit
+            if end == 0:
+                break
+            lines.append(word[:end])
+            word = word[end:]
+
+        current = word
+
     if current:
         lines.append(current)
+
     return lines
 
 chat_lines = []
