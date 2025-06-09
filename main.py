@@ -1,19 +1,9 @@
 import pygame
 import sys
-import logging
-import os
-import platform
 import settings
 from dog_park import draw_dog_park
 from inventory import draw_inventory
-import chat
-from chat import (
-    draw_chat,
-    update_chat,
-    init_chat,
-    chat_lines,
-    handle_chat_event,
-)
+from chat import draw_chat, update_chat, init_chat, chat_lines
 from settings import (
     draw_settings,
     handle_settings_event,
@@ -35,73 +25,16 @@ from battle import (
     handle_gamelink_event,
 )
 
-# Set up logging to both console and file early so startup details are
-# captured. Use DEBUG level for verbose output.
-logging.basicConfig(
-    level=logging.DEBUG,
-    format="%(asctime)s [%(levelname)s] %(message)s",
-    handlers=[
-        logging.FileHandler("log.txt", mode="w"),
-        logging.StreamHandler(sys.stdout),
-    ],
-)
-logger = logging.getLogger(__name__)
-
 pygame.init()
-try:
-    pygame.mixer.init()
-    SOUND_AVAILABLE = True
-except Exception:
-    SOUND_AVAILABLE = False
-    warning = "Warning: Audio disabled"
-    print(warning)
-    logger.warning(warning)
 SIZE = 128
 screen = pygame.display.set_mode((SIZE, SIZE))
 pygame.display.set_caption("Virtual Pet Menu Prototype")
-
-def log_startup_info() -> None:
-    """Log helpful diagnostics about the running environment."""
-    logger.info("=== Startup Information ===")
-    logger.info(f"Python version: {sys.version}")
-    logger.info(f"Platform: {platform.platform()}")
-    logger.info(
-        "Pygame version: %s (SDL %s)"
-        % (pygame.version.ver, ".".join(str(v) for v in pygame.get_sdl_version()))
-    )
-    logger.info(f"Video driver: {pygame.display.get_driver()}")
-    logger.info(f"Env DISPLAY: {os.environ.get('DISPLAY')}")
-    logger.info(f"Env SDL_VIDEODRIVER: {os.environ.get('SDL_VIDEODRIVER')}")
-    logger.info(f"Env SDL_AUDIODRIVER: {os.environ.get('SDL_AUDIODRIVER')}")
-    logger.info(f"Working dir: {os.getcwd()}")
-    logger.info(f"Screen size: {screen.get_size()}")
-    info = pygame.display.Info()
-    logger.info(
-        f"Display info: {info.current_w}x{info.current_h} bitsize={info.bitsize}"
-    )
-    logger.info(f"Sound available: {SOUND_AVAILABLE}")
-    logger.info(f"Mixer init: {pygame.mixer.get_init()}")
-
-log_startup_info()
-
-# Warn when running with the dummy video driver so users know why
-# no window appears. This commonly happens when DISPLAY isn't set.
-if pygame.display.get_driver() == "dummy":
-    warning = (
-        "Warning: SDL is using the dummy video driver. The game window"
-        " will not be displayed. Ensure a graphical environment is"
-        " available and the DISPLAY variable is set."
-    )
-    print(warning)
-    logger.warning(warning)
 
 FONT = pygame.font.SysFont("monospace", 12)
 BIGFONT = pygame.font.SysFont("monospace", 15)
 
 WHITE = (255,255,255)
 BLACK = (0,0,0)
-
-TETRIS_MUSIC = os.path.join(os.path.dirname(__file__), "assets", "Tetris.ogg")
 
 menu_options = [
     "Birdie",
@@ -126,119 +59,82 @@ running = True
 # For passing state (e.g. chat)
 chat_scroll = 0
 
-try:
-    while running:
-        now = pygame.time.get_ticks() / 1000.0
-        logger.debug(f"Loop start: state={state} time={now:.2f}")
-        old_state = state
-        for event in pygame.event.get():
-            logger.debug(f"Event: {event}")
-            if event.type == pygame.QUIT:
-                logger.info("QUIT event received")
-                running = False
+while running:
+    now = pygame.time.get_ticks() / 1000.0
+    for event in pygame.event.get():
+        if event.type == pygame.QUIT:
+            running = False
 
-            elif event.type == pygame.KEYDOWN:
-                logger.debug(f"Key down: {event.key}")
-                if state == "menu":
-                    if event.key in [pygame.K_UP, pygame.K_DOWN]:
-                        if event.key == pygame.K_UP:
-                            selected = (selected - 1) % len(menu_options)
-                        else:
-                            selected = (selected + 1) % len(menu_options)
-                        logger.debug(f"Menu selection changed to {selected}")
-                        if selected < menu_scroll:
-                            menu_scroll = selected
-                        elif selected >= menu_scroll + MAX_VISIBLE:
-                            menu_scroll = selected - MAX_VISIBLE + 1
-                        menu_scroll = max(0, min(menu_scroll, len(menu_options) - MAX_VISIBLE))
-                    elif event.key in [pygame.K_RETURN, pygame.K_SPACE]:
-                        state = menu_options[selected]
-                        logger.info(f"State change -> {state}")
-                        if state == "Chat":
-                            logger.info("Initializing chat")
-                            init_chat()
-                else:
-                    if state == "Type":
-                        if event.key == pygame.K_ESCAPE:
-                            logger.info("State change -> menu")
-                            state = "menu"
-                        else:
-                            handle_type_event(event)
-                    elif state == "Battle":
-                        selection = handle_battle_menu_event(event)
-                        if selection == "Practice":
-                            start_practice_battle()
-                            state = "BattlePractice"
-                            logger.info("State change -> BattlePractice")
-                        elif selection == "GameLink":
-                            state = "BattleGameLink"
-                            logger.info("State change -> BattleGameLink")
-                        elif event.key == pygame.K_ESCAPE:
-                            logger.info("State change -> menu")
-                            state = "menu"
-                    elif state == "BattlePractice":
-                        if handle_practice_event(event):
-                            state = "Battle"
-                            logger.info("State change -> Battle")
-                    elif state == "BattleGameLink":
-                        if handle_gamelink_event(event):
-                            state = "Battle"
-                            logger.info("State change -> Battle")
-                    elif state == "Settings":
-                        if event.key == pygame.K_RETURN:
-                            option = settings.settings_options[settings.selected_option]
-                            if option["name"] == "Sound":
-                                state = "SoundSettings"
-                                logger.info("State change -> SoundSettings")
-                            else:
-                                state = "menu"
-                                logger.info("State change -> menu")
-                        else:
-                            handle_settings_event(event)
-                    elif state == "SoundSettings":
-                        if event.key == pygame.K_RETURN:
-                            state = "Settings"
-                            logger.info("State change -> Settings")
-                        else:
-                            handle_sound_event(event)
-                    elif state == "Chat":
-                        if event.key == pygame.K_ESCAPE:
-                            chat_scroll = 0
-                            chat.typed_text = ""
-                            logger.info("State change -> menu")
-                            state = "menu"
-                        else:
-                            handle_chat_event(event)
-                    elif event.key in [pygame.K_RETURN, pygame.K_SPACE]:
-                        logger.info("State change -> menu")
+        elif event.type == pygame.KEYDOWN:
+            if state == "menu":
+                if event.key in [pygame.K_UP, pygame.K_DOWN]:
+                    if event.key == pygame.K_UP:
+                        selected = (selected - 1) % len(menu_options)
+                    else:
+                        selected = (selected + 1) % len(menu_options)
+                    if selected < menu_scroll:
+                        menu_scroll = selected
+                    elif selected >= menu_scroll + MAX_VISIBLE:
+                        menu_scroll = selected - MAX_VISIBLE + 1
+                    menu_scroll = max(0, min(menu_scroll, len(menu_options) - MAX_VISIBLE))
+                elif event.key in [pygame.K_RETURN, pygame.K_SPACE]:
+                    state = menu_options[selected]
+                    if state == "Chat":
+                        init_chat()
+            else:
+                if state == "Type":
+                    if event.key == pygame.K_ESCAPE:
                         state = "menu"
-                    elif state == "Snake":
-                        logger.debug("snake event")
-                        handle_snake_event(event)
-                    elif state == "Pong":
-                        logger.debug("pong event")
-                        handle_pong_event(event)
-                    elif state == "Tetris":
-                        logger.debug("tetris event")
-                        handle_tetris_event(event)
-
-            elif event.type == pygame.KEYUP:
-                logger.debug(f"Key up: {event.key}")
-                if state == "Pong":
+                    else:
+                        handle_type_event(event)
+                elif state == "Battle":
+                    selection = handle_battle_menu_event(event)
+                    if selection == "Practice":
+                        start_practice_battle()
+                        state = "BattlePractice"
+                    elif selection == "GameLink":
+                        state = "BattleGameLink"
+                    elif event.key == pygame.K_ESCAPE:
+                        state = "menu"
+                elif state == "BattlePractice":
+                    if handle_practice_event(event):
+                        state = "Battle"
+                elif state == "BattleGameLink":
+                    if handle_gamelink_event(event):
+                        state = "Battle"
+                elif state == "Settings":
+                    if event.key == pygame.K_RETURN:
+                        option = settings.settings_options[settings.selected_option]
+                        if option["name"] == "Sound":
+                            state = "SoundSettings"
+                        else:
+                            state = "menu"
+                    else:
+                        handle_settings_event(event)
+                elif state == "SoundSettings":
+                    if event.key == pygame.K_RETURN:
+                        state = "Settings"
+                    else:
+                        handle_sound_event(event)
+                elif event.key in [pygame.K_RETURN, pygame.K_SPACE]:
+                    if state == "Chat":
+                        chat_scroll = 0
+                    state = "menu"
+                elif state == "Chat":
+                    # Pass arrow key events for scrolling
+                    if event.key == pygame.K_UP:
+                        chat_scroll += 1
+                    elif event.key == pygame.K_DOWN:
+                        chat_scroll -= 1
+                elif state == "Snake":
+                    handle_snake_event(event)
+                elif state == "Pong":
                     handle_pong_event(event)
-
-        # Handle entering or leaving Tetris state
-        if state != old_state:
-            if state == "Tetris":
-                if SOUND_AVAILABLE:
-                    try:
-                        pygame.mixer.music.load(TETRIS_MUSIC)
-                        pygame.mixer.music.play(-1)
-                    except Exception:
-                        logger.exception("Failed to play Tetris music")
-                reset_tetris()
-            elif old_state == "Tetris" and SOUND_AVAILABLE:
-                pygame.mixer.music.stop()
+                elif state == "Tetris":
+                    handle_tetris_event(event)
+        elif event.type == pygame.KEYUP:
+            if state == "Pong":
+                handle_pong_event(event)
 
     # Draw current screen
     if state == "menu":
@@ -284,8 +180,6 @@ try:
 
     pygame.display.flip()
     clock.tick(30)
-except Exception:
-    logger.exception("Unhandled exception")
-finally:
-    pygame.quit()
-    sys.exit()
+
+pygame.quit()
+sys.exit()
