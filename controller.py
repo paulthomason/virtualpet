@@ -1,10 +1,21 @@
 """GPIO input handler for the Waveshare 1.44" LCD HAT."""
 
+import logging
 import pygame
 try:
     import RPi.GPIO as GPIO
 except ImportError:  # Allow running on non-RPi platforms
     GPIO = None
+
+# Shared logger for HAT-related activity
+logger = logging.getLogger("hat")
+if not logger.handlers:
+    handler = logging.FileHandler("hatlog.txt", mode="a")
+    handler.setFormatter(
+        logging.Formatter("%(asctime)s %(levelname)s: %(message)s")
+    )
+    logger.addHandler(handler)
+logger.setLevel(logging.DEBUG)
 
 # GPIO pin definitions for the 1.44" LCD HAT
 PIN_JOY_UP = 6
@@ -33,12 +44,13 @@ def init() -> None:
     """Initialise GPIO handling and register callbacks."""
     if GPIO is None:
         # If GPIO is unavailable we fall back to keyboard controls.
-        print("GPIO not available; using keyboard input")
+        logger.warning("GPIO not available; using keyboard input")
         return
 
     # Clear any previous GPIO configuration that might remain if the
     # application exited unexpectedly.  This helps avoid "Failed to add edge
     # detection" errors when rerunning the program.
+    logger.debug("Configuring GPIO pins")
     GPIO.cleanup()
     GPIO.setmode(GPIO.BCM)
     for pin in PIN_KEY_MAP:
@@ -47,6 +59,7 @@ def init() -> None:
             GPIO.add_event_detect(
                 pin, GPIO.BOTH, callback=_handle, bouncetime=50
             )
+            logger.debug(f"Added event detection for pin {pin}")
         except RuntimeError:
             # If event detection is already in place for this pin, remove and
             # try again so that reruns work without manual cleanup.
@@ -55,14 +68,16 @@ def init() -> None:
                 GPIO.add_event_detect(
                     pin, GPIO.BOTH, callback=_handle, bouncetime=50
                 )
+                logger.debug(f"Re-added event detection for pin {pin}")
             except RuntimeError as exc:
-                print(f"Failed to add edge detection for pin {pin}: {exc}")
+                logger.exception(f"Failed to add edge detection for pin {pin}: {exc}")
 
 
 def cleanup() -> None:
     """Clean up GPIO resources."""
     if GPIO is not None:
         GPIO.cleanup()
+        logger.debug("GPIO cleanup complete")
 
 
 def _handle(pin: int) -> None:
@@ -73,3 +88,5 @@ def _handle(pin: int) -> None:
     pressed = GPIO.input(pin) == GPIO.LOW
     event_type = pygame.KEYDOWN if pressed else pygame.KEYUP
     pygame.event.post(pygame.event.Event(event_type, key=key))
+    state = "pressed" if pressed else "released"
+    logger.debug(f"Pin {pin} {state}")
