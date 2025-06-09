@@ -2,6 +2,7 @@ import pygame
 import sys
 import logging
 import os
+import platform
 import settings
 from dog_park import draw_dog_park
 from inventory import draw_inventory
@@ -27,34 +28,65 @@ from battle import (
     handle_gamelink_event,
 )
 
+# Set up logging to both console and file early so startup details are
+# captured. Use DEBUG level for verbose output.
+logging.basicConfig(
+    level=logging.DEBUG,
+    format="%(asctime)s [%(levelname)s] %(message)s",
+    handlers=[
+        logging.FileHandler("log.txt", mode="w"),
+        logging.StreamHandler(sys.stdout),
+    ],
+)
+logger = logging.getLogger(__name__)
+
 pygame.init()
 try:
     pygame.mixer.init()
     SOUND_AVAILABLE = True
 except Exception:
     SOUND_AVAILABLE = False
-    print("Warning: Audio disabled")
+    warning = "Warning: Audio disabled"
+    print(warning)
+    logger.warning(warning)
 SIZE = 128
 screen = pygame.display.set_mode((SIZE, SIZE))
 pygame.display.set_caption("Virtual Pet Menu Prototype")
 
+def log_startup_info() -> None:
+    """Log helpful diagnostics about the running environment."""
+    logger.info("=== Startup Information ===")
+    logger.info(f"Python version: {sys.version}")
+    logger.info(f"Platform: {platform.platform()}")
+    logger.info(
+        "Pygame version: %s (SDL %s)"
+        % (pygame.version.ver, ".".join(str(v) for v in pygame.get_sdl_version()))
+    )
+    logger.info(f"Video driver: {pygame.display.get_driver()}")
+    logger.info(f"Env DISPLAY: {os.environ.get('DISPLAY')}")
+    logger.info(f"Env SDL_VIDEODRIVER: {os.environ.get('SDL_VIDEODRIVER')}")
+    logger.info(f"Env SDL_AUDIODRIVER: {os.environ.get('SDL_AUDIODRIVER')}")
+    logger.info(f"Working dir: {os.getcwd()}")
+    logger.info(f"Screen size: {screen.get_size()}")
+    info = pygame.display.Info()
+    logger.info(
+        f"Display info: {info.current_w}x{info.current_h} bitsize={info.bitsize}"
+    )
+    logger.info(f"Sound available: {SOUND_AVAILABLE}")
+    logger.info(f"Mixer init: {pygame.mixer.get_init()}")
+
+log_startup_info()
+
 # Warn when running with the dummy video driver so users know why
 # no window appears. This commonly happens when DISPLAY isn't set.
 if pygame.display.get_driver() == "dummy":
-    print("Warning: SDL is using the dummy video driver. The game window"
-          " will not be displayed. Ensure a graphical environment is"
-          " available and the DISPLAY variable is set.")
-
-# Set up logging to both console and file
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s [%(levelname)s] %(message)s",
-    handlers=[
-        logging.FileHandler("log.txt"),
-        logging.StreamHandler(sys.stdout),
-    ],
-)
-logger = logging.getLogger(__name__)
+    warning = (
+        "Warning: SDL is using the dummy video driver. The game window"
+        " will not be displayed. Ensure a graphical environment is"
+        " available and the DISPLAY variable is set."
+    )
+    print(warning)
+    logger.warning(warning)
 
 FONT = pygame.font.SysFont("monospace", 12)
 BIGFONT = pygame.font.SysFont("monospace", 15)
