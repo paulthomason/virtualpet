@@ -162,7 +162,8 @@ def draw_chat(screen, FONT, chat_lines, chat_scroll):
 
     # Draw the current input line at the bottom
     input_display = typed_text[-16:]
-    msg = FONT.render(f"> {input_display}", True, (0, 255, 0))
+    # Render the typed input in white for better readability
+    msg = FONT.render(f"> {input_display}", True, (255, 255, 255))
     screen.blit(msg, (6, 108))
 
     # Display on-screen keyboard similar to the typing mini-game
