@@ -58,6 +58,42 @@ def toggle_bluetooth(on: bool) -> None:
     except Exception:
         pass
 
+
+def available_sinks() -> list:
+    """Return a list of available sound output sinks."""
+    try:
+        out = subprocess.check_output(["pactl", "list", "short", "sinks"]).decode()
+        return [line.split("\t")[1] for line in out.splitlines() if line]
+    except Exception:
+        return ["default"]
+
+
+def current_sink() -> str:
+    """Return the name of the current default sound sink."""
+    try:
+        out = subprocess.check_output(["pactl", "info"]).decode()
+        for line in out.splitlines():
+            if line.lower().startswith("default sink:"):
+                return line.split(":", 1)[1].strip()
+    except Exception:
+        pass
+    return "default"
+
+
+def set_default_sink(sink: str) -> None:
+    """Set the system default sound sink."""
+    try:
+        subprocess.check_call(["pactl", "set-default-sink", sink])
+    except Exception:
+        pass
+
+
+# Cached list of sinks and current default
+_SINKS = available_sinks()
+_CURRENT_SINK = current_sink()
+if _CURRENT_SINK not in _SINKS:
+    _SINKS.append(_CURRENT_SINK)
+
 # Available settings with default values
 settings_options = [
     {"name": "Sound", "type": "submenu"},
@@ -73,6 +109,11 @@ selected_option = 0
 sound_options = [
     {"name": "Volume", "type": "range", "value": 50},
     {"name": "Bluetooth", "type": "bool", "value": False},
+    {
+        "name": "Output",
+        "type": _SINKS,
+        "value": _CURRENT_SINK,
+    },
 ]
 # Currently selected option in the sound menu
 selected_sound = 0
@@ -143,6 +184,15 @@ def handle_sound_event(event):
         elif option["name"] == "Bluetooth":
             option["value"] = not option["value"]
             toggle_bluetooth(option["value"])
+        elif option["name"] == "Output":
+            choices = option["type"]
+            idx = choices.index(option["value"]) if option["value"] in choices else 0
+            if event.key == pygame.K_LEFT:
+                idx = (idx - 1) % len(choices)
+            else:
+                idx = (idx + 1) % len(choices)
+            option["value"] = choices[idx]
+            set_default_sink(option["value"])
 
 
 def draw_sound_settings(screen, FONT):
