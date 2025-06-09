@@ -116,16 +116,18 @@ while running:
                         state = "Settings"
                     else:
                         handle_sound_event(event)
-                elif event.key in [pygame.K_RETURN, pygame.K_SPACE]:
-                    if state == "Chat":
-                        chat_scroll = 0
-                    state = "menu"
                 elif state == "Chat":
-                    # Pass arrow key events for scrolling
-                    if event.key == pygame.K_UP:
+                    if event.key == pygame.K_ESCAPE:
+                        chat_scroll = 0
+                        state = "menu"
+                    elif event.key == pygame.K_PAGEUP:
                         chat_scroll += 1
-                    elif event.key == pygame.K_DOWN:
+                    elif event.key == pygame.K_PAGEDOWN:
                         chat_scroll -= 1
+                    else:
+                        handle_chat_event(event)
+                elif event.key in [pygame.K_RETURN, pygame.K_SPACE]:
+                    state = "menu"
                 elif state == "Snake":
                     handle_snake_event(event)
                 elif state == "Pong":
