@@ -5,6 +5,8 @@ from inventory import draw_inventory
 from chat import draw_chat, update_chat
 from settings import draw_settings, handle_settings_event
 from birdie import draw_birdie
+from snake import draw_snake, update_snake, handle_snake_event
+from pong import draw_pong, update_pong, handle_pong_event
 
 pygame.init()
 SIZE = 128
@@ -17,7 +19,7 @@ BIGFONT = pygame.font.SysFont("monospace", 15)
 WHITE = (255,255,255)
 BLACK = (0,0,0)
 
-menu_options = ["Birdie", "Dog Park", "Inventory", "Chat", "Settings"]
+menu_options = ["Birdie", "Dog Park", "Inventory", "Chat", "Settings", "Snake", "Pong"]
 selected = 0
 state = "menu"
 
@@ -60,6 +62,10 @@ while running:
                         chat_scroll -= 1
                 elif state == "Settings":
                     handle_settings_event(event)
+                elif state == "Snake":
+                    handle_snake_event(event)
+                elif state == "Pong":
+                    handle_pong_event(event)
 
     # Draw current screen
     if state == "menu":
@@ -81,6 +87,12 @@ while running:
         draw_settings(screen, FONT)
     elif state == "Birdie":
         draw_birdie(screen, FONT)
+    elif state == "Snake":
+        update_snake(now)
+        draw_snake(screen, FONT)
+    elif state == "Pong":
+        update_pong(now)
+        draw_pong(screen, FONT)
 
     pygame.display.flip()
     clock.tick(30)
