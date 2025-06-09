@@ -22,6 +22,7 @@ from tetris import (
 )
 from typer import draw_type, handle_type_event
 import remote
+import controller
 from battle import (
     draw_battle_menu,
     handle_battle_menu_event,
@@ -33,6 +34,7 @@ from battle import (
 )
 
 pygame.init()
+controller.init()
 SIZE = 128
 screen = pygame.display.set_mode((SIZE, SIZE))
 pygame.display.set_caption("Virtual Pet Menu Prototype")
@@ -210,5 +212,6 @@ while running:
     pygame.display.flip()
     clock.tick(30)
 
+controller.cleanup()
 pygame.quit()
 sys.exit()
