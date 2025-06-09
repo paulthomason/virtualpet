@@ -38,6 +38,13 @@ SIZE = 128
 screen = pygame.display.set_mode((SIZE, SIZE))
 pygame.display.set_caption("Virtual Pet Menu Prototype")
 
+# Warn when running with the dummy video driver so users know why
+# no window appears. This commonly happens when DISPLAY isn't set.
+if pygame.display.get_driver() == "dummy":
+    print("Warning: SDL is using the dummy video driver. The game window"
+          " will not be displayed. Ensure a graphical environment is"
+          " available and the DISPLAY variable is set.")
+
 # Set up logging to both console and file
 logging.basicConfig(
     level=logging.INFO,
