@@ -1,57 +1,64 @@
 """Main entry point for the virtual pet on the 1.44\" LCD HAT."""
 
 import os
-import pygame
 import sys
+import time
+import pygame  # Still used for input events
 import settings
-from dog_park import draw_dog_park
-from inventory import draw_inventory, handle_inventory_event
-from chat import draw_chat, update_chat, init_chat, chat_lines, handle_chat_event
+from PIL import Image, ImageFont
+from luma.core.interface.serial import spi
+from luma.core.render import canvas
+from luma.lcd.device import st7735
+from inventory import handle_inventory_event
+from chat import init_chat, chat_lines, handle_chat_event
 from settings import (
-    draw_settings,
     handle_settings_event,
-    draw_sound_settings,
     handle_sound_event,
 )
-from birdie import draw_birdie
-from snake import draw_snake, update_snake, handle_snake_event
-from pong import draw_pong, update_pong, handle_pong_event
+from snake import handle_snake_event
+from pong import handle_pong_event
 from tetris import (
-    draw_tetris,
-    update_tetris,
     handle_tetris_event,
     reset_tetris,
     stop_music,
 )
-from typer import draw_type, handle_type_event
+from typer import handle_type_event
 import remote
 import controller
 from battle import (
-    draw_battle_menu,
     handle_battle_menu_event,
     start_practice_battle,
-    draw_practice_battle,
     handle_practice_event,
-    draw_gamelink,
     handle_gamelink_event,
 )
 
 # Configure pygame to use the LCD HAT's framebuffer if running on the Pi
-os.environ.setdefault("SDL_VIDEODRIVER", "fbcon")
-os.environ.setdefault("SDL_FBDEV", "/dev/fb1")
-os.environ.setdefault("SDL_NOMOUSE", "1")
+# Environment settings for the old pygame framebuffer output are kept
+# for reference but are no longer required when using luma.lcd.
+# os.environ.setdefault("SDL_VIDEODRIVER", "fbcon")
+# os.environ.setdefault("SDL_FBDEV", "/dev/fb1")
+# os.environ.setdefault("SDL_NOMOUSE", "1")
 
-pygame.init()
+pygame.init()  # Still needed for event handling from controller
 controller.init()
 SIZE = 128
-screen = pygame.display.set_mode((SIZE, SIZE), pygame.FULLSCREEN)
-pygame.display.set_caption("Virtual Pet")
 
-FONT = pygame.font.SysFont("monospace", 12)
-BIGFONT = pygame.font.SysFont("monospace", 15)
+# SPI interface for the LCD; verify the GPIO numbers for your HAT
+serial = spi(port=0, device=0, gpio_DC=24, gpio_RST=25, gpio_CS=8)
 
-WHITE = (255,255,255)
-BLACK = (0,0,0)
+# Initialize the ST7735 display. h_offset and v_offset may need tuning.
+device = st7735(serial, width=SIZE, height=SIZE, h_offset=2, v_offset=1)
+
+# pygame screen no longer used
+# screen = pygame.display.set_mode((SIZE, SIZE), pygame.FULLSCREEN)
+# pygame.display.set_caption("Virtual Pet")
+FONT = ImageFont.truetype(
+    "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf", 12
+)
+BIGFONT = ImageFont.truetype(
+    "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf", 15
+)
+
 
 menu_options = [
     "Birdie",
@@ -72,147 +79,117 @@ MAX_VISIBLE = 6
 state = "menu"
 prev_state = state
 
-clock = pygame.time.Clock()
 running = True
 
+try:
+    while running:
+        prev_state = state
+        now = time.time()
 
-while running:
-    prev_state = state
-    now = pygame.time.get_ticks() / 1000.0
-    for event in pygame.event.get():
-        if event.type == pygame.QUIT:
-            running = False
-
-        elif event.type == pygame.KEYDOWN:
-            if state == "menu":
-                if event.key in [pygame.K_UP, pygame.K_DOWN]:
-                    if event.key == pygame.K_UP:
-                        selected = (selected - 1) % len(menu_options)
-                    else:
-                        selected = (selected + 1) % len(menu_options)
-                    if selected < menu_scroll:
-                        menu_scroll = selected
-                    elif selected >= menu_scroll + MAX_VISIBLE:
-                        menu_scroll = selected - MAX_VISIBLE + 1
-                    menu_scroll = max(0, min(menu_scroll, len(menu_options) - MAX_VISIBLE))
-                elif event.key in [pygame.K_RETURN, pygame.K_SPACE]:
-                    state = menu_options[selected]
-                    if state == "Chat":
-                        init_chat()
-                    elif state == "Remote":
-                        remote.start_server()
-                    elif state == "Tetris":
-                        reset_tetris()
-            else:
-                if state == "Type":
-                    if event.key == pygame.K_ESCAPE:
-                        state = "menu"
-                    else:
-                        handle_type_event(event)
-                elif state == "Battle":
-                    selection = handle_battle_menu_event(event)
-                    if selection == "Practice":
-                        start_practice_battle()
-                        state = "BattlePractice"
-                    elif selection == "GameLink":
-                        state = "BattleGameLink"
-                    elif event.key == pygame.K_ESCAPE:
-                        state = "menu"
-                elif state == "BattlePractice":
-                    if handle_practice_event(event):
-                        state = "Battle"
-                elif state == "BattleGameLink":
-                    if handle_gamelink_event(event):
-                        state = "Battle"
-                elif state == "Settings":
-                    if event.key == pygame.K_RETURN:
-                        option = settings.settings_options[settings.selected_option]
-                        if option["name"] == "Sound":
-                            state = "SoundSettings"
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                running = False
+            elif event.type == pygame.KEYDOWN:
+                if state == "menu":
+                    if event.key in [pygame.K_UP, pygame.K_DOWN]:
+                        if event.key == pygame.K_UP:
+                            selected = (selected - 1) % len(menu_options)
                         else:
+                            selected = (selected + 1) % len(menu_options)
+                        if selected < menu_scroll:
+                            menu_scroll = selected
+                        elif selected >= menu_scroll + MAX_VISIBLE:
+                            menu_scroll = selected - MAX_VISIBLE + 1
+                        menu_scroll = max(0, min(menu_scroll, len(menu_options) - MAX_VISIBLE))
+                    elif event.key in [pygame.K_RETURN, pygame.K_SPACE]:
+                        state = menu_options[selected]
+                        if state == "Chat":
+                            init_chat()
+                        elif state == "Remote":
+                            remote.start_server()
+                        elif state == "Tetris":
+                            reset_tetris()
+                else:
+                    if state == "Type":
+                        if event.key == pygame.K_ESCAPE:
                             state = "menu"
-                    else:
-                        handle_settings_event(event)
-                elif state == "SoundSettings":
-                    if event.key == pygame.K_RETURN:
-                        state = "Settings"
-                    else:
-                        handle_sound_event(event)
-                elif state == "Chat":
-                    if event.key == pygame.K_ESCAPE:
+                        else:
+                            handle_type_event(event)
+                    elif state == "Battle":
+                        selection = handle_battle_menu_event(event)
+                        if selection == "Practice":
+                            start_practice_battle()
+                            state = "BattlePractice"
+                        elif selection == "GameLink":
+                            state = "BattleGameLink"
+                        elif event.key == pygame.K_ESCAPE:
+                            state = "menu"
+                    elif state == "BattlePractice":
+                        if handle_practice_event(event):
+                            state = "Battle"
+                    elif state == "BattleGameLink":
+                        if handle_gamelink_event(event):
+                            state = "Battle"
+                    elif state == "Settings":
+                        if event.key == pygame.K_RETURN:
+                            option = settings.settings_options[settings.selected_option]
+                            if option["name"] == "Sound":
+                                state = "SoundSettings"
+                            else:
+                                state = "menu"
+                        else:
+                            handle_settings_event(event)
+                    elif state == "SoundSettings":
+                        if event.key == pygame.K_RETURN:
+                            state = "Settings"
+                        else:
+                            handle_sound_event(event)
+                    elif state == "Chat":
+                        if event.key == pygame.K_ESCAPE:
+                            state = "menu"
+                        else:
+                            handle_chat_event(event)
+                    elif state == "Inventory":
+                        if handle_inventory_event(event):
+                            state = "menu"
+                    elif state == "Remote":
+                        if event.key in (pygame.K_RETURN, pygame.K_SPACE, pygame.K_ESCAPE):
+                            state = "menu"
+                    elif event.key in [pygame.K_RETURN, pygame.K_SPACE]:
                         state = "menu"
-                    else:
-                        handle_chat_event(event)
-                elif state == "Inventory":
-                    if handle_inventory_event(event):
-                        state = "menu"
-                elif state == "Remote":
-                    if event.key in (pygame.K_RETURN, pygame.K_SPACE, pygame.K_ESCAPE):
-                        state = "menu"
-                elif event.key in [pygame.K_RETURN, pygame.K_SPACE]:
-                    state = "menu"
-                elif state == "Snake":
-                    handle_snake_event(event)
-                elif state == "Pong":
+                    elif state == "Snake":
+                        handle_snake_event(event)
+                    elif state == "Pong":
+                        handle_pong_event(event)
+                    elif state == "Tetris":
+                        handle_tetris_event(event)
+
+            elif event.type == pygame.KEYUP:
+                if state == "Pong":
                     handle_pong_event(event)
-                elif state == "Tetris":
-                    handle_tetris_event(event)
 
-        elif event.type == pygame.KEYUP:
-            if state == "Pong":
-                handle_pong_event(event)
+        # Stop Tetris music when leaving the screen
+        if prev_state == "Tetris" and state != "Tetris":
+            stop_music()
 
-    # Stop Tetris music when leaving the screen
-    if prev_state == "Tetris" and state != "Tetris":
-        stop_music()
+        # Draw current screen on the SPI LCD
+        with canvas(device) as draw:
+            draw.rectangle(device.bounding_box, outline="black", fill="black")
+            if state == "menu":
+                draw.text((10, 5), "Main Menu", font=BIGFONT, fill="white")
+                visible = menu_options[menu_scroll:menu_scroll + MAX_VISIBLE]
+                for idx, option in enumerate(visible):
+                    i = menu_scroll + idx
+                    color = "blue" if i == selected else "white"
+                    draw.text((20, 28 + idx * 16), option, font=FONT, fill=color)
+            else:
+                draw.text((10, 54), f"{state} screen", font=FONT, fill="white")
 
-    # Draw current screen
-    if state == "menu":
-        screen.fill((120, 180, 255))
-        title = BIGFONT.render("Main Menu", True, BLACK)
-        screen.blit(title, (10, 5))
-        visible_options = menu_options[menu_scroll:menu_scroll + MAX_VISIBLE]
-        for idx, option in enumerate(visible_options):
-            i = menu_scroll + idx
-            color = (50,100,255) if i == selected else BLACK
-            text = FONT.render(option, True, color)
-            screen.blit(text, (20, 28 + idx*16))
-    elif state == "Dog Park":
-        draw_dog_park(screen, FONT)
-    elif state == "Inventory":
-        draw_inventory(screen, FONT)
-    elif state == "Chat":
-        update_chat(chat_lines, now)
-        draw_chat(screen, FONT, chat_lines, 0)
-    elif state == "Settings":
-        draw_settings(screen, FONT)
-    elif state == "SoundSettings":
-        draw_sound_settings(screen, FONT)
-    elif state == "Birdie":
-        draw_birdie(screen, FONT)
-    elif state == "Battle":
-        draw_battle_menu(screen, FONT)
-    elif state == "BattlePractice":
-        draw_practice_battle(screen, FONT)
-    elif state == "BattleGameLink":
-        draw_gamelink(screen, FONT)
-    elif state == "Snake":
-        update_snake(now)
-        draw_snake(screen, FONT)
-    elif state == "Pong":
-        update_pong(now)
-        draw_pong(screen, FONT)
-    elif state == "Tetris":
-        update_tetris(now)
-        draw_tetris(screen, FONT)
-    elif state == "Remote":
-        remote.draw_remote(screen, FONT)
-    elif state == "Type":
-        draw_type(screen, FONT)
+        time.sleep(1/30)
 
-    pygame.display.flip()
-    clock.tick(30)
-
-controller.cleanup()
-pygame.quit()
-sys.exit()
+except KeyboardInterrupt:
+    pass
+finally:
+    controller.cleanup()
+    pygame.quit()
+    sys.exit()
