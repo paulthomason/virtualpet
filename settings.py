@@ -40,9 +40,27 @@ def current_ssid() -> str:
         pass
     return "unknown"
 
+
+def set_volume(volume: int) -> None:
+    """Attempt to set system volume using ``amixer``."""
+    level = max(0, min(100, volume))
+    try:
+        subprocess.check_call(["amixer", "set", "Master", f"{level}%"])
+    except Exception:
+        pass
+
+
+def toggle_bluetooth(on: bool) -> None:
+    """Placeholder for connecting or disconnecting a Bluetooth speaker."""
+    cmd = ["bluetoothctl", "power", "on" if on else "off"]
+    try:
+        subprocess.check_call(cmd)
+    except Exception:
+        pass
+
 # Available settings with default values
 settings_options = [
-    {"name": "Sound", "type": "bool", "value": True},
+    {"name": "Sound", "type": "submenu"},
     {"name": "Difficulty", "type": ["Easy", "Normal", "Hard"], "value": "Normal"},
     {"name": "Show Tips", "type": "bool", "value": True},
     {"name": "WiFi", "type": "bool", "value": wifi_enabled()},
@@ -50,6 +68,14 @@ settings_options = [
 
 # Index of the currently selected setting
 selected_option = 0
+
+# Options within the sound submenu
+sound_options = [
+    {"name": "Volume", "type": "range", "value": 50},
+    {"name": "Bluetooth", "type": "bool", "value": False},
+]
+# Currently selected option in the sound menu
+selected_sound = 0
 
 
 def handle_settings_event(event):
@@ -66,7 +92,7 @@ def handle_settings_event(event):
             option["value"] = not option["value"]
             if option["name"] == "WiFi":
                 set_wifi_enabled(option["value"])
-        else:
+        elif isinstance(option["type"], list):
             choices = option["type"]
             idx = choices.index(option["value"])
             if event.key == pygame.K_LEFT:
@@ -85,11 +111,53 @@ def draw_settings(screen, FONT):
 
     for i, option in enumerate(settings_options):
         color = (200, 255, 200) if i == selected_option else (255, 255, 255)
-        text_value = option['value']
-        if option['name'] == 'WiFi':
-            status = 'On' if option['value'] else 'Off'
-            text_value = f"{status} ({current_ssid()})"
-        text = f"{option['name']}: {text_value}"
+        text_value = option.get("value")
+        if option["type"] == "submenu":
+            text = option["name"]
+        else:
+            if option['name'] == 'WiFi':
+                status = 'On' if option['value'] else 'Off'
+                text_value = f"{status} ({current_ssid()})"
+            text = f"{option['name']}: {text_value}"
+        msg = FONT.render(text, True, color)
+        screen.blit(msg, (6, 24 + i * 16))
+
+    tip = FONT.render("Arrows=Change  Enter=Back", True, (200, 220, 255))
+    screen.blit(tip, (6, 114))
+
+
+def handle_sound_event(event):
+    """Handle key input on the sound settings screen."""
+    global selected_sound
+
+    if event.key == pygame.K_UP:
+        selected_sound = (selected_sound - 1) % len(sound_options)
+    elif event.key == pygame.K_DOWN:
+        selected_sound = (selected_sound + 1) % len(sound_options)
+    elif event.key in (pygame.K_LEFT, pygame.K_RIGHT, pygame.K_SPACE):
+        option = sound_options[selected_sound]
+        if option["name"] == "Volume":
+            delta = -10 if event.key == pygame.K_LEFT else 10
+            option["value"] = max(0, min(100, option["value"] + delta))
+            set_volume(option["value"])
+        elif option["name"] == "Bluetooth":
+            option["value"] = not option["value"]
+            toggle_bluetooth(option["value"])
+
+
+def draw_sound_settings(screen, FONT):
+    """Render the sound settings menu."""
+    screen.fill((60, 60, 100))
+
+    title = FONT.render("Sound Settings", True, (255, 255, 255))
+    screen.blit(title, (6, 4))
+
+    for i, option in enumerate(sound_options):
+        color = (200, 255, 200) if i == selected_sound else (255, 255, 255)
+        value = option["value"]
+        if option["name"] == "Bluetooth":
+            value = "On" if option["value"] else "Off"
+        text = f"{option['name']}: {value}"
         msg = FONT.render(text, True, color)
         screen.blit(msg, (6, 24 + i * 16))
 
