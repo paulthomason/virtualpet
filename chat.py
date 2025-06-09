@@ -17,6 +17,9 @@ shift = False
 # Queue used by the IRC thread to send outgoing messages
 send_queue: queue.Queue[str] = queue.Queue()
 
+# Nickname used when connecting to the IRC server
+NICK = "birdie"
+
 MAX_VISIBLE = 4
 chat_lines = []
 _init = False
@@ -86,7 +89,7 @@ def init_chat() -> None:
     server = "192.168.0.81"
     port = 6667
     channel = "#pet"
-    nick = "birdie"
+    nick = NICK
 
     logger.debug(
         f"Starting IRC thread for {server}:{port} {channel} as {nick}"
@@ -107,6 +110,10 @@ def send_chat_message(message: str) -> None:
     """Queue an outgoing chat message to be sent to the IRC server."""
     if message:
         send_queue.put(message)
+        # Immediately display our own message locally so it shows up
+        chat_lines.append({"user": NICK, "msg": message})
+        if len(chat_lines) > 100:
+            chat_lines.pop(0)
 
 
 def handle_chat_event(event) -> None:
