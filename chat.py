@@ -2,11 +2,14 @@
 
 import socket
 import threading
+import logging
 
 MAX_VISIBLE = 6
 chat_lines = []
 _init = False
 _thread = None
+
+logger = logging.getLogger(__name__)
 
 
 def _irc_thread(server: str, port: int, channel: str, nick: str) -> None:
@@ -18,6 +21,7 @@ def _irc_thread(server: str, port: int, channel: str, nick: str) -> None:
     try:
         sock = socket.socket()
         sock.connect((server, port))
+        logger.debug(f"Connected to {server}:{port}, joining {channel} as {nick}")
         send(f"NICK {nick}\r\n")
         send(f"USER {nick} 0 * :{nick}\r\n")
         send(f"JOIN {channel}\r\n")
@@ -41,22 +45,28 @@ def _irc_thread(server: str, port: int, channel: str, nick: str) -> None:
                     if len(chat_lines) > 100:
                         chat_lines.pop(0)
     except Exception as exc:  # pragma: no cover - runtime errors shown onscreen
+        error_msg = f"IRC connection error: {exc}"
+        print(error_msg)
+        logger.exception(error_msg)
         chat_lines.append({"user": "error", "msg": str(exc)})
 
 
 def init_chat() -> None:
-    """Prompt the user for IRC details and start the background thread."""
+    """Start the IRC background thread with preset connection details."""
 
     global _init, _thread
     if _init:
         return
 
-    server = input("IRC server: ") or "irc.libera.chat"
-    port = input("Port (default 6667): ")
-    channel = input("Channel (include #): ")
-    nick = input("Nickname: ") or "virtualpet"
+    server = "192.168.0.81"
+    port = 6667
+    channel = "#pet"
+    nick = "birdie"
 
-    port = int(port) if port else 6667
+    logger.debug(
+        f"Starting IRC thread for {server}:{port} {channel} as {nick}"
+    )
+
     _thread = threading.Thread(
         target=_irc_thread, args=(server, port, channel, nick), daemon=True
     )
