@@ -20,7 +20,12 @@ send_queue: queue.Queue[str] = queue.Queue()
 # Nickname used when connecting to the IRC server
 NICK = "birdie"
 
-MAX_VISIBLE = 4
+# Max number of chat lines to display on screen
+MAX_VISIBLE = 5
+
+# Pixel height for each chat line
+LINE_HEIGHT = 14
+
 chat_lines = []
 _init = False
 _thread = None
@@ -151,25 +156,25 @@ def draw_chat(screen, FONT, chat_lines, chat_scroll):
     end = max(0, len(chat_lines) - chat_scroll)
     visible = chat_lines[start:end]
     for i, chat in enumerate(visible):
-        y = 15 + i * 18
+        y = 15 + i * LINE_HEIGHT
         msg = FONT.render(f"{chat['user']}> {chat['msg']}", True, (255, 255, 255))
         screen.blit(msg, (6, y))
 
     # Draw the current input line at the bottom
     input_display = typed_text[-16:]
     msg = FONT.render(f"> {input_display}", True, (0, 255, 0))
-    screen.blit(msg, (6, 118))
+    screen.blit(msg, (6, 108))
 
     # Display on-screen keyboard similar to the typing mini-game
     start_k = scroll
     end_k = scroll + VISIBLE
     for i, ch in enumerate(keyboard_chars[start_k:end_k]):
         idx = start_k + i
-        color = (255, 255, 0) if idx == cursor else (200, 200, 200)
+        color = (255, 255, 0) if idx == cursor else (230, 230, 230)
         disp_ch = ch.upper() if shift else ch
         text = FONT.render(disp_ch, True, color)
         x = 6 + i * 12
-        screen.blit(text, (x, 98))
+        screen.blit(text, (x, 88))
 
-    tip = FONT.render("ARROWS Type TAB=Shift RET=Send ESC=Back PGUP/DN=Scroll", True, (150, 150, 150))
+    tip = FONT.render("ARROWS Type TAB=Shift RET=Send ESC=Back PGUP/DN=Scroll", True, (255, 255, 255))
     screen.blit(tip, (2, 2))
