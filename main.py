@@ -3,6 +3,7 @@
 import os
 import sys
 import time
+import logging
 import pygame  # Still used for input events
 import settings
 from PIL import Image, ImageFont
@@ -32,6 +33,17 @@ from battle import (
     handle_gamelink_event,
 )
 
+# Logger capturing display and controller initialization issues
+logger = logging.getLogger("hat")
+if not logger.handlers:
+    handler = logging.FileHandler("hatlog.txt", mode="a")
+    handler.setFormatter(
+        logging.Formatter("%(asctime)s %(levelname)s: %(message)s")
+    )
+    logger.addHandler(handler)
+logger.setLevel(logging.DEBUG)
+logger.info("Virtual Pet starting")
+
 # Configure pygame to use the LCD HAT's framebuffer if running on the Pi
 # Environment settings for the old pygame framebuffer output are kept
 # for reference but are no longer required when using luma.lcd.
@@ -40,14 +52,22 @@ from battle import (
 # os.environ.setdefault("SDL_NOMOUSE", "1")
 
 pygame.init()  # Still needed for event handling from controller
+logger.debug("pygame initialised")
 controller.init()
+logger.debug("Controller initialised")
 SIZE = 128
 
 # SPI interface for the LCD; verify the GPIO numbers for your HAT
 serial = spi(port=0, device=0, gpio_DC=24, gpio_RST=25, gpio_CS=8)
+logger.debug("SPI interface created")
 
 # Initialize the ST7735 display. h_offset and v_offset may need tuning.
-device = st7735(serial, width=SIZE, height=SIZE, h_offset=2, v_offset=1)
+try:
+    device = st7735(serial, width=SIZE, height=SIZE, h_offset=2, v_offset=1)
+    logger.info("ST7735 display initialised")
+except Exception as exc:
+    logger.exception(f"Failed to initialise display: {exc}")
+    raise
 
 # pygame screen no longer used
 # screen = pygame.display.set_mode((SIZE, SIZE), pygame.FULLSCREEN)
@@ -173,23 +193,28 @@ try:
             stop_music()
 
         # Draw current screen on the SPI LCD
-        with canvas(device) as draw:
-            draw.rectangle(device.bounding_box, outline="black", fill="black")
-            if state == "menu":
-                draw.text((10, 5), "Main Menu", font=BIGFONT, fill="white")
-                visible = menu_options[menu_scroll:menu_scroll + MAX_VISIBLE]
-                for idx, option in enumerate(visible):
-                    i = menu_scroll + idx
-                    color = "blue" if i == selected else "white"
-                    draw.text((20, 28 + idx * 16), option, font=FONT, fill=color)
-            else:
-                draw.text((10, 54), f"{state} screen", font=FONT, fill="white")
+        try:
+            with canvas(device) as draw:
+                logger.debug(f"Rendering state: {state}")
+                draw.rectangle(device.bounding_box, outline="black", fill="black")
+                if state == "menu":
+                    draw.text((10, 5), "Main Menu", font=BIGFONT, fill="white")
+                    visible = menu_options[menu_scroll:menu_scroll + MAX_VISIBLE]
+                    for idx, option in enumerate(visible):
+                        i = menu_scroll + idx
+                        color = "blue" if i == selected else "white"
+                        draw.text((20, 28 + idx * 16), option, font=FONT, fill=color)
+                else:
+                    draw.text((10, 54), f"{state} screen", font=FONT, fill="white")
+        except Exception as exc:
+            logger.exception(f"Failed to render frame: {exc}")
 
         time.sleep(1/30)
 
 except KeyboardInterrupt:
-    pass
+    logger.info("Exiting due to KeyboardInterrupt")
 finally:
     controller.cleanup()
     pygame.quit()
+    logger.info("Virtual Pet stopped")
     sys.exit()
