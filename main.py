@@ -1,9 +1,15 @@
 import pygame
 import sys
+import settings
 from dog_park import draw_dog_park
 from inventory import draw_inventory
 from chat import draw_chat, update_chat, init_chat, chat_lines
-from settings import draw_settings, handle_settings_event
+from settings import (
+    draw_settings,
+    handle_settings_event,
+    draw_sound_settings,
+    handle_sound_event,
+)
 from birdie import draw_birdie
 from snake import draw_snake, update_snake, handle_snake_event
 from pong import draw_pong, update_pong, handle_pong_event
@@ -96,6 +102,20 @@ while running:
                 elif state == "BattleGameLink":
                     if handle_gamelink_event(event):
                         state = "Battle"
+                elif state == "Settings":
+                    if event.key == pygame.K_RETURN:
+                        option = settings.settings_options[settings.selected_option]
+                        if option["name"] == "Sound":
+                            state = "SoundSettings"
+                        else:
+                            state = "menu"
+                    else:
+                        handle_settings_event(event)
+                elif state == "SoundSettings":
+                    if event.key == pygame.K_RETURN:
+                        state = "Settings"
+                    else:
+                        handle_sound_event(event)
                 elif event.key in [pygame.K_RETURN, pygame.K_SPACE]:
                     if state == "Chat":
                         chat_scroll = 0
@@ -106,8 +126,6 @@ while running:
                         chat_scroll += 1
                     elif event.key == pygame.K_DOWN:
                         chat_scroll -= 1
-                elif state == "Settings":
-                    handle_settings_event(event)
                 elif state == "Snake":
                     handle_snake_event(event)
                 elif state == "Pong":
@@ -138,6 +156,8 @@ while running:
         draw_chat(screen, FONT, chat_lines, chat_scroll)
     elif state == "Settings":
         draw_settings(screen, FONT)
+    elif state == "SoundSettings":
+        draw_sound_settings(screen, FONT)
     elif state == "Birdie":
         draw_birdie(screen, FONT)
     elif state == "Battle":
