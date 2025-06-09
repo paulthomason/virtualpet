@@ -164,5 +164,5 @@ def draw_chat(screen, FONT, chat_lines, chat_scroll):
         x = 6 + i * 12
         screen.blit(text, (x, 98))
 
-    tip = FONT.render("ARROWS Type TAB=Shift RET=Send ESC=Back", True, (150, 150, 150))
+    tip = FONT.render("ARROWS Type TAB=Shift RET=Send ESC=Back PGUP/DN=Scroll", True, (150, 150, 150))
     screen.blit(tip, (2, 2))
