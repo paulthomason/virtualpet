@@ -60,6 +60,16 @@ def _start_music() -> None:
         logger.exception(f"Failed to play Tetris.ogg: {exc}")
 
 
+def stop_music() -> None:
+    """Stop the Tetris background music."""
+    try:
+        if pygame.mixer.get_init():
+            pygame.mixer.music.stop()
+            logger.info("Stopped Tetris.ogg")
+    except Exception as exc:  # pragma: no cover - runtime error logged
+        logger.exception(f"Failed to stop Tetris.ogg: {exc}")
+
+
 def _new_piece():
     """Spawn a new random piece"""
     global current, rotation, position, high_score, score

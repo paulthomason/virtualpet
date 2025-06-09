@@ -13,7 +13,13 @@ from settings import (
 from birdie import draw_birdie
 from snake import draw_snake, update_snake, handle_snake_event
 from pong import draw_pong, update_pong, handle_pong_event
-from tetris import draw_tetris, update_tetris, handle_tetris_event, reset_tetris
+from tetris import (
+    draw_tetris,
+    update_tetris,
+    handle_tetris_event,
+    reset_tetris,
+    stop_music,
+)
 from typer import draw_type, handle_type_event
 import remote
 from battle import (
@@ -54,6 +60,7 @@ selected = 0
 menu_scroll = 0
 MAX_VISIBLE = 6
 state = "menu"
+prev_state = state
 
 clock = pygame.time.Clock()
 running = True
@@ -62,6 +69,7 @@ running = True
 chat_scroll = 0
 
 while running:
+    prev_state = state
     now = pygame.time.get_ticks() / 1000.0
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
@@ -146,9 +154,14 @@ while running:
                     handle_pong_event(event)
                 elif state == "Tetris":
                     handle_tetris_event(event)
+
         elif event.type == pygame.KEYUP:
             if state == "Pong":
                 handle_pong_event(event)
+
+    # Stop Tetris music when leaving the screen
+    if prev_state == "Tetris" and state != "Tetris":
+        stop_music()
 
     # Draw current screen
     if state == "menu":
