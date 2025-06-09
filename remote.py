@@ -1,5 +1,6 @@
 import http.server
 import threading
+import time
 import urllib.parse
 import html
 import settings
@@ -116,4 +117,15 @@ def draw_remote(screen, FONT) -> None:
     screen.blit(msg, (6, 54))
     tip = FONT.render("Press joystick to return", True, (200, 220, 255))
     screen.blit(tip, (6, 114))
+
+
+if __name__ == "__main__":  # pragma: no cover - manual testing helper
+    """Allow running ``remote.py`` directly to launch the server."""
+    start_server()
+    print("Remote server running on http://0.0.0.0:8000/ (Ctrl+C to stop)")
+    try:
+        while True:
+            time.sleep(1)
+    except KeyboardInterrupt:
+        pass
 
