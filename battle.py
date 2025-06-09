@@ -14,6 +14,10 @@ enemy_hp = ENEMY_MAX_HP
 message = ""
 battle_over = False
 
+# Move names for practice mode
+ATTACKS = ["Scratch", "Bite", "Kick", "Headbutt"]
+selected_attack = 0
+
 
 def handle_battle_menu_event(event):
     """Handle up/down/select events in the battle menu."""
@@ -42,11 +46,12 @@ def draw_battle_menu(screen, FONT):
 
 def start_practice_battle():
     """Initialise practice battle state."""
-    global player_hp, enemy_hp, message, battle_over
+    global player_hp, enemy_hp, message, battle_over, selected_attack
     player_hp = PLAYER_MAX_HP
     enemy_hp = random.randint(ENEMY_MIN_HP, ENEMY_MAX_HP)
     message = "A wild pet appeared!"
     battle_over = False
+    selected_attack = 0
 
 
 def handle_practice_event(event):
@@ -54,24 +59,29 @@ def handle_practice_event(event):
 
     Returns True when the battle should exit back to the battle menu.
     """
-    global player_hp, enemy_hp, message, battle_over
+    global player_hp, enemy_hp, message, battle_over, selected_attack
     if battle_over:
         if event.key in (pygame.K_RETURN, pygame.K_SPACE, pygame.K_ESCAPE):
             return True
         return False
     if event.key == pygame.K_ESCAPE:
         return True
-    if event.key in (pygame.K_RETURN, pygame.K_SPACE):
-        damage = random.randint(5, 12)
-        enemy_hp -= damage
-        message = f"You hit! {damage} dmg"
+    if event.key == pygame.K_UP:
+        selected_attack = (selected_attack - 1) % len(ATTACKS)
+    elif event.key == pygame.K_DOWN:
+        selected_attack = (selected_attack + 1) % len(ATTACKS)
+    elif event.key in (pygame.K_RETURN, pygame.K_SPACE):
+        dmg = random.randint(5, 12)
+        enemy_hp -= dmg
+        move = ATTACKS[selected_attack]
+        message = f"You used {move}! {dmg} dmg"
         if enemy_hp <= 0:
             battle_over = True
             message = "You won!"
             return False
-        enemy_damage = random.randint(5, 12)
-        player_hp -= enemy_damage
-        message += f" Enemy hits {enemy_damage}"
+        enemy_dmg = random.randint(5, 12)
+        player_hp -= enemy_dmg
+        message += f" Enemy hits {enemy_dmg}"
         if player_hp <= 0:
             battle_over = True
             message += " - You lost!"
@@ -89,8 +99,17 @@ def draw_practice_battle(screen, FONT):
     screen.blit(msg, (6, 60))
     if battle_over:
         tip = FONT.render("Enter=Back", True, (200, 220, 255))
-    else:
-        tip = FONT.render("Enter=Attack Esc=Run", True, (200, 220, 255))
+        screen.blit(tip, (6, 114))
+        return
+
+    # Draw attack options
+    for i, atk in enumerate(ATTACKS):
+        color = (200, 255, 200) if i == selected_attack else (255, 255, 255)
+        option = FONT.render(atk, True, color)
+        screen.blit(option, (6, 80 + i * 12))
+
+    tip = FONT.render("Up/Down=Select Enter=Attack Esc=Run", True,
+                      (200, 220, 255))
     screen.blit(tip, (6, 114))
 
 
