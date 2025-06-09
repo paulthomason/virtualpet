@@ -1,5 +1,7 @@
 import pygame
 import random
+import logging
+import os
 
 GRID_SIZE = 8
 COLS = 10
@@ -34,6 +36,27 @@ DROP_DELAY = 0.5
 score = 0
 high_score = 0
 
+# Logger to capture all sound related events
+logger = logging.getLogger("sound")
+if not logger.handlers:
+    handler = logging.FileHandler("soundlog.txt", mode="a")
+    handler.setFormatter(
+        logging.Formatter("%(asctime)s %(levelname)s: %(message)s")
+    )
+    logger.addHandler(handler)
+logger.setLevel(logging.DEBUG)
+
+
+def _start_music() -> None:
+    """Play the Tetris background music."""
+    try:
+        music_path = os.path.join("assets", "Tetris.ogg")
+        pygame.mixer.music.load(music_path)
+        pygame.mixer.music.play(-1)
+        logger.info("Playing Tetris.ogg")
+    except Exception as exc:  # pragma: no cover - runtime error logged
+        logger.exception(f"Failed to play Tetris.ogg: {exc}")
+
 
 def _new_piece():
     """Spawn a new random piece"""
@@ -57,6 +80,7 @@ def _reset_board():
 
 def reset_tetris():
     _reset_board()
+    _start_music()
 
 
 def _collision(pos, rot):
@@ -152,3 +176,4 @@ def draw_tetris(screen, FONT):
 
 # initialise first piece
 _new_piece()
+_start_music()
