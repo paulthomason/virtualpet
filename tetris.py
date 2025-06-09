@@ -50,6 +50,8 @@ logger.setLevel(logging.DEBUG)
 def _start_music() -> None:
     """Play the Tetris background music."""
     try:
+        if not pygame.mixer.get_init():
+            pygame.mixer.init()
         music_path = os.path.join("assets", "Tetris.ogg")
         pygame.mixer.music.load(music_path)
         pygame.mixer.music.play(-1)
@@ -174,6 +176,3 @@ def draw_tetris(screen, FONT):
     tip = FONT.render("Arrows Move Up Rot Enter Back", True,(200,200,200))
     screen.blit(tip,(2,114))
 
-# initialise first piece
-_new_piece()
-_start_music()

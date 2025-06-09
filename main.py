@@ -85,6 +85,8 @@ while running:
                         init_chat()
                     elif state == "Remote":
                         remote.start_server()
+                    elif state == "Tetris":
+                        reset_tetris()
             else:
                 if state == "Type":
                     if event.key == pygame.K_ESCAPE:
