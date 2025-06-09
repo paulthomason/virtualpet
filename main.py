@@ -1,6 +1,7 @@
 import pygame
 import sys
 import logging
+import os
 import settings
 from dog_park import draw_dog_park
 from inventory import draw_inventory
@@ -27,6 +28,7 @@ from battle import (
 )
 
 pygame.init()
+pygame.mixer.init()
 SIZE = 128
 screen = pygame.display.set_mode((SIZE, SIZE))
 pygame.display.set_caption("Virtual Pet Menu Prototype")
@@ -47,6 +49,8 @@ BIGFONT = pygame.font.SysFont("monospace", 15)
 
 WHITE = (255,255,255)
 BLACK = (0,0,0)
+
+TETRIS_MUSIC = os.path.join(os.path.dirname(__file__), "assets", "Tetris.ogg")
 
 menu_options = [
     "Birdie",
@@ -75,6 +79,7 @@ try:
     while running:
         now = pygame.time.get_ticks() / 1000.0
         logger.debug(f"Loop start: state={state} time={now:.2f}")
+        old_state = state
         for event in pygame.event.get():
             logger.debug(f"Event: {event}")
             if event.type == pygame.QUIT:
@@ -164,10 +169,23 @@ try:
                     elif state == "Tetris":
                         logger.debug("tetris event")
                         handle_tetris_event(event)
+
             elif event.type == pygame.KEYUP:
                 logger.debug(f"Key up: {event.key}")
                 if state == "Pong":
                     handle_pong_event(event)
+
+        # Handle entering or leaving Tetris state
+        if state != old_state:
+            if state == "Tetris":
+                try:
+                    pygame.mixer.music.load(TETRIS_MUSIC)
+                    pygame.mixer.music.play(-1)
+                except Exception:
+                    logger.exception("Failed to play Tetris music")
+                reset_tetris()
+            elif old_state == "Tetris":
+                pygame.mixer.music.stop()
 
     # Draw current screen
     if state == "menu":
