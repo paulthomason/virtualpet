@@ -1,3 +1,6 @@
+"""Main entry point for the virtual pet on the 1.44\" LCD HAT."""
+
+import os
 import pygame
 import sys
 import settings
@@ -33,11 +36,16 @@ from battle import (
     handle_gamelink_event,
 )
 
+# Configure pygame to use the LCD HAT's framebuffer if running on the Pi
+os.environ.setdefault("SDL_VIDEODRIVER", "fbcon")
+os.environ.setdefault("SDL_FBDEV", "/dev/fb1")
+os.environ.setdefault("SDL_NOMOUSE", "1")
+
 pygame.init()
 controller.init()
 SIZE = 128
-screen = pygame.display.set_mode((SIZE, SIZE))
-pygame.display.set_caption("Virtual Pet Menu Prototype")
+screen = pygame.display.set_mode((SIZE, SIZE), pygame.FULLSCREEN)
+pygame.display.set_caption("Virtual Pet")
 
 FONT = pygame.font.SysFont("monospace", 12)
 BIGFONT = pygame.font.SysFont("monospace", 15)
@@ -67,8 +75,6 @@ prev_state = state
 clock = pygame.time.Clock()
 running = True
 
-# For passing state (e.g. chat)
-chat_scroll = 0
 
 while running:
     prev_state = state
@@ -134,12 +140,7 @@ while running:
                         handle_sound_event(event)
                 elif state == "Chat":
                     if event.key == pygame.K_ESCAPE:
-                        chat_scroll = 0
                         state = "menu"
-                    elif event.key == pygame.K_PAGEUP:
-                        chat_scroll += 1
-                    elif event.key == pygame.K_PAGEDOWN:
-                        chat_scroll -= 1
                     else:
                         handle_chat_event(event)
                 elif state == "Inventory":
@@ -182,7 +183,7 @@ while running:
         draw_inventory(screen, FONT)
     elif state == "Chat":
         update_chat(chat_lines, now)
-        draw_chat(screen, FONT, chat_lines, chat_scroll)
+        draw_chat(screen, FONT, chat_lines, 0)
     elif state == "Settings":
         draw_settings(screen, FONT)
     elif state == "SoundSettings":

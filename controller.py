@@ -1,3 +1,5 @@
+"""GPIO input handler for the Waveshare 1.44" LCD HAT."""
+
 import pygame
 try:
     import RPi.GPIO as GPIO
