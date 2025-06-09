@@ -23,8 +23,42 @@ NICK = "birdie"
 # Max number of chat lines to display on screen
 MAX_VISIBLE = 5
 
-# Pixel height for each chat line
-LINE_HEIGHT = 14
+# Pixel height for each chat line.  This will be updated once the chat
+# font is created.
+LINE_HEIGHT = 16
+
+# Font used for chat rendering.  It is created lazily after pygame has
+# been initialised so that it can be bigger/bolder for improved
+# readability on the small display.
+CHAT_FONT = None
+
+
+def get_chat_font():
+    """Return the font used for chat rendering, creating it if needed."""
+    global CHAT_FONT, LINE_HEIGHT
+    if CHAT_FONT is None:
+        # Slightly larger bold monospace font for readability
+        CHAT_FONT = pygame.font.SysFont("monospace", 14, bold=True)
+        LINE_HEIGHT = CHAT_FONT.get_height() + 2
+    return CHAT_FONT
+
+
+def wrap_text(text: str, font: pygame.font.Font, width: int) -> list[str]:
+    """Wrap ``text`` into a list of lines no wider than ``width`` pixels."""
+    words = text.split(" ")
+    lines = []
+    current = ""
+    for word in words:
+        candidate = word if not current else f"{current} {word}"
+        if font.size(candidate)[0] <= width:
+            current = candidate
+        else:
+            if current:
+                lines.append(current)
+            current = word
+    if current:
+        lines.append(current)
+    return lines
 
 chat_lines = []
 _init = False
@@ -151,19 +185,37 @@ def handle_chat_event(event) -> None:
 def draw_chat(screen, FONT, chat_lines, chat_scroll):
     """Render the received IRC messages."""
 
+    font = get_chat_font()
     screen.fill((0, 0, 0))
-    start = max(0, len(chat_lines) - MAX_VISIBLE - chat_scroll)
-    end = max(0, len(chat_lines) - chat_scroll)
-    visible = chat_lines[start:end]
-    for i, chat in enumerate(visible):
+
+    max_width = screen.get_width() - 12
+
+    # Expand stored messages into individual wrapped lines
+    rendered_lines: list[tuple[str, int]] = []
+    for chat in chat_lines:
+        prefix = f"{chat['user']}> "
+        prefix_width = font.size(prefix)[0]
+        parts = wrap_text(chat["msg"], font, max_width - prefix_width)
+        if not parts:
+            parts = [""]
+        for idx, part in enumerate(parts):
+            if idx == 0:
+                rendered_lines.append((prefix + part, 6))
+            else:
+                rendered_lines.append((part, 6 + prefix_width))
+
+    start = max(0, len(rendered_lines) - MAX_VISIBLE - chat_scroll)
+    end = max(0, len(rendered_lines) - chat_scroll)
+    visible = rendered_lines[start:end]
+
+    for i, (text, x) in enumerate(visible):
         y = 15 + i * LINE_HEIGHT
-        msg = FONT.render(f"{chat['user']}> {chat['msg']}", True, (255, 255, 255))
-        screen.blit(msg, (6, y))
+        msg = font.render(text, True, (255, 255, 255))
+        screen.blit(msg, (x, y))
 
     # Draw the current input line at the bottom
     input_display = typed_text[-16:]
-    # Render the typed input in white for better readability
-    msg = FONT.render(f"> {input_display}", True, (255, 255, 255))
+    msg = font.render(f"> {input_display}", True, (255, 255, 255))
     screen.blit(msg, (6, 108))
 
     # Display on-screen keyboard similar to the typing mini-game
@@ -173,9 +225,13 @@ def draw_chat(screen, FONT, chat_lines, chat_scroll):
         idx = start_k + i
         color = (255, 255, 0) if idx == cursor else (230, 230, 230)
         disp_ch = ch.upper() if shift else ch
-        text = FONT.render(disp_ch, True, color)
+        text = font.render(disp_ch, True, color)
         x = 6 + i * 12
         screen.blit(text, (x, 88))
 
-    tip = FONT.render("ARROWS Type TAB=Shift RET=Send ESC=Back PGUP/DN=Scroll", True, (255, 255, 255))
+    tip = font.render(
+        "ARROWS Type TAB=Shift RET=Send ESC=Back PGUP/DN=Scroll",
+        True,
+        (255, 255, 255),
+    )
     screen.blit(tip, (2, 2))
