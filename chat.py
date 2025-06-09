@@ -233,8 +233,10 @@ def draw_chat(screen, FONT, chat_lines, chat_scroll):
                     (prefix, part, prefix_color, text_color, 6)
                 )
             else:
+                # Start wrapped lines underneath the nickname rather than
+                # aligning with the text from the previous line
                 rendered_lines.append(
-                    ("", part, prefix_color, text_color, 6 + prefix_width)
+                    ("", part, prefix_color, text_color, 6)
                 )
 
     start = max(0, len(rendered_lines) - MAX_VISIBLE - chat_scroll)
