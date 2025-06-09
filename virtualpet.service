@@ -1,0 +1,13 @@
+[Unit]
+Description=Virtual Pet startup
+After=network.target
+
+[Service]
+Type=simple
+User=pi
+WorkingDirectory=/home/pi/virtualpet
+ExecStart=/usr/bin/python3 main.py
+Restart=on-failure
+
+[Install]
+WantedBy=multi-user.target
