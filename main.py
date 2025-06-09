@@ -28,14 +28,19 @@ from battle import (
 )
 
 pygame.init()
-pygame.mixer.init()
+try:
+    pygame.mixer.init()
+    SOUND_AVAILABLE = True
+except Exception:
+    SOUND_AVAILABLE = False
+    print("Warning: Audio disabled")
 SIZE = 128
 screen = pygame.display.set_mode((SIZE, SIZE))
 pygame.display.set_caption("Virtual Pet Menu Prototype")
 
 # Set up logging to both console and file
 logging.basicConfig(
-    level=logging.DEBUG,
+    level=logging.INFO,
     format="%(asctime)s [%(levelname)s] %(message)s",
     handlers=[
         logging.FileHandler("log.txt"),
@@ -178,13 +183,14 @@ try:
         # Handle entering or leaving Tetris state
         if state != old_state:
             if state == "Tetris":
-                try:
-                    pygame.mixer.music.load(TETRIS_MUSIC)
-                    pygame.mixer.music.play(-1)
-                except Exception:
-                    logger.exception("Failed to play Tetris music")
+                if SOUND_AVAILABLE:
+                    try:
+                        pygame.mixer.music.load(TETRIS_MUSIC)
+                        pygame.mixer.music.play(-1)
+                    except Exception:
+                        logger.exception("Failed to play Tetris music")
                 reset_tetris()
-            elif old_state == "Tetris":
+            elif old_state == "Tetris" and SOUND_AVAILABLE:
                 pygame.mixer.music.stop()
 
     # Draw current screen
