@@ -1,0 +1,87 @@
+import pygame
+import sys
+from dog_park import draw_dog_park
+from inventory import draw_inventory
+from chat import draw_chat, update_chat
+from settings import draw_settings
+from birdie import draw_birdie
+
+pygame.init()
+SIZE = 128
+screen = pygame.display.set_mode((SIZE, SIZE))
+pygame.display.set_caption("Virtual Pet Menu Prototype")
+
+FONT = pygame.font.SysFont("monospace", 12)
+BIGFONT = pygame.font.SysFont("monospace", 15)
+
+WHITE = (255,255,255)
+BLACK = (0,0,0)
+
+menu_options = ["Birdie", "Dog Park", "Inventory", "Chat", "Settings"]
+selected = 0
+state = "menu"
+
+clock = pygame.time.Clock()
+running = True
+
+# For passing state (e.g. chat)
+chat_lines = [
+    {"user": "syl", "msg": "wat up"},
+    {"user": "george", "msg": "yo"},
+]
+chat_scroll = 0
+last_msg_time = 0
+
+while running:
+    now = pygame.time.get_ticks() / 1000.0
+    for event in pygame.event.get():
+        if event.type == pygame.QUIT:
+            running = False
+
+        elif event.type == pygame.KEYDOWN:
+            if state == "menu":
+                if event.key in [pygame.K_UP, pygame.K_DOWN]:
+                    if event.key == pygame.K_UP:
+                        selected = (selected - 1) % len(menu_options)
+                    else:
+                        selected = (selected + 1) % len(menu_options)
+                elif event.key in [pygame.K_RETURN, pygame.K_SPACE]:
+                    state = menu_options[selected]
+            else:
+                if event.key in [pygame.K_RETURN, pygame.K_SPACE]:
+                    state = "menu"
+                    if state == "Chat":
+                        chat_scroll = 0
+                elif state == "Chat":
+                    # Pass arrow key events for scrolling
+                    if event.key == pygame.K_UP:
+                        chat_scroll += 1
+                    elif event.key == pygame.K_DOWN:
+                        chat_scroll -= 1
+
+    # Draw current screen
+    if state == "menu":
+        screen.fill((120, 180, 255))
+        title = BIGFONT.render("Main Menu", True, BLACK)
+        screen.blit(title, (10, 5))
+        for i, option in enumerate(menu_options):
+            color = (50,100,255) if i == selected else BLACK
+            text = FONT.render(option, True, color)
+            screen.blit(text, (20, 28 + i*16))
+    elif state == "Dog Park":
+        draw_dog_park(screen, FONT)
+    elif state == "Inventory":
+        draw_inventory(screen, FONT)
+    elif state == "Chat":
+        update_chat(chat_lines, now)
+        draw_chat(screen, FONT, chat_lines, chat_scroll)
+    elif state == "Settings":
+        draw_settings(screen, FONT)
+    elif state == "Birdie":
+        draw_birdie(screen, FONT)
+
+    pygame.display.flip()
+    clock.tick(30)
+
+pygame.quit()
+sys.exit()
