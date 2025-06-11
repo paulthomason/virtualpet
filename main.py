@@ -24,6 +24,7 @@ from tetris import (
     stop_music,
 )
 from typer import handle_type_event
+from news import init_news, handle_news_event, draw_news
 import remote
 import controller
 from battle import (
@@ -85,6 +86,7 @@ menu_options = [
     "Dog Park",
     "Inventory",
     "Chat",
+    "News",
     "Settings",
     "Battle",
     "Snake",
@@ -125,6 +127,8 @@ try:
                         state = menu_options[selected]
                         if state == "Chat":
                             init_chat()
+                        elif state == "News":
+                            init_news()
                         elif state == "Remote":
                             remote.start_server()
                         elif state == "Tetris":
@@ -169,6 +173,9 @@ try:
                             state = "menu"
                         else:
                             handle_chat_event(event)
+                    elif state == "News":
+                        if handle_news_event(event):
+                            state = "menu"
                     elif state == "Inventory":
                         if handle_inventory_event(event):
                             state = "menu"
@@ -204,6 +211,8 @@ try:
                         i = menu_scroll + idx
                         color = "blue" if i == selected else "white"
                         draw.text((20, 28 + idx * 16), option, font=FONT, fill=color)
+                elif state == "News":
+                    draw_news(draw, FONT, SIZE, SIZE)
                 else:
                     draw.text((10, 54), f"{state} screen", font=FONT, fill="white")
         except Exception as exc:
